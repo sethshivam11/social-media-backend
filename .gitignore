@@ -26,6 +26,7 @@ dist-ssr
 # Backend files
 node_modules
 dist
+nodemon.json
 
 
 

@@ -1,8 +1,8 @@
-import express, { Express } from "express"
+import express, { Request, Response } from "express"
 import path from "path"
 import cookieParser from "cookie-parser"
 
-const app: Express = express()
+const app = express()
 
 app.use(express.json({ limit: "16kb" }))
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))
@@ -24,13 +24,13 @@ const __dirname1 = path.resolve()
 
 if (process.env.NODE_ENV === "production") {
     app.use(express.static(path.join(__dirname1, "client", "dist")))
-    app.get("*", (_, res) => {
-        res.sendFile(path.resolve("client", "dist", "index.html"))
+    app.get("*", (_: Request, res: Response) => {
+        res.sendFile(path.resolve(__dirname1, "client", "dist", "index.html"))
     })
 }
 else {
-    app.get("/", (_, res) => {
-        res.send("App is running")
+    app.get("/", (_: Request, res: Response) => {
+        res.send("App is under development!")
     })
 }
 
