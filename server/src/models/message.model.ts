@@ -1,4 +1,11 @@
-import mongoose, {Schema} from "mongoose"
+import mongoose, { Schema, Document } from "mongoose"
+
+interface MessageInterface extends Document {
+    sender: String,
+    chat: String,
+    content: String,
+    viewOnce: Boolean
+}
 
 const messageSchema = new Schema({
     sender: {
@@ -23,4 +30,4 @@ const messageSchema = new Schema({
     timestamps: true,
 })
 
-export const Message = mongoose.model("message", messageSchema)
+export const Message = mongoose.model<MessageInterface>("message", messageSchema)

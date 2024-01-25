@@ -1,4 +1,13 @@
-import mongoose, {Schema} from "mongoose"
+import mongoose, { Schema, Document } from "mongoose"
+
+interface PostInterface extends Document {
+    user: String,
+    caption: String,
+    media: String,
+    tags: String[],
+    likesCount: Number,
+    commentsCount: Number
+}
 
 const postSchema = new Schema({
     user: {
@@ -21,4 +30,4 @@ const postSchema = new Schema({
     timestamps: true
 })
 
-export const Post = mongoose.model("post", postSchema)
+export const Post = mongoose.model<PostInterface>("post", postSchema)

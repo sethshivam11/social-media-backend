@@ -3,12 +3,12 @@ interface ApiError {
     message: string;
     data: null;
     success: boolean;
-    errors: object[]
+    errors: string[]
 }
 
 
 class ApiError extends Error {
-    constructor(statusCode: number, errors: object[] = [], message = "Something went wrong!", stack = "") {
+    constructor(statusCode: number, message = "Something went wrong!", errors: string[] = [], stack = "") {
         super(message)
         this.statusCode = statusCode
         this.message = message

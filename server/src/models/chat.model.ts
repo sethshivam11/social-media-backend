@@ -1,4 +1,12 @@
-import mongoose, { Schema } from "mongoose"
+import mongoose, { Schema, Document } from "mongoose"
+
+interface ChatInterface extends Document {
+    users: String[],
+    isGroupChat: Boolean,
+    admin: String[],
+    groupName: String,
+    groupIcon: String
+}
 
 const chatSchema = new Schema({
     users: [{
@@ -9,10 +17,10 @@ const chatSchema = new Schema({
         type: Boolean,
         default: false,
     },
-    admin: {
+    admin: [{
         type: Schema.Types.ObjectId,
         ref: "user"
-    },
+    }],
     groupName: {
         type: String,
         default: "personal"
@@ -24,4 +32,4 @@ const chatSchema = new Schema({
     timestamps: true
 })
 
-export const Chat = mongoose.model("chat", chatSchema)
+export const Chat = mongoose.model<ChatInterface>("chat", chatSchema)

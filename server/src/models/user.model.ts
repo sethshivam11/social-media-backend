@@ -1,4 +1,25 @@
-import mongoose, { Schema } from "mongoose"
+import mongoose, { Schema, Document } from "mongoose"
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
+
+interface UserInterface extends Document {
+    avatar: String
+    fullName: String
+    username: String,
+    email: String
+    password: String
+    bio: String
+    followingCount: Number
+    followersCount: Number
+    isBlueTick: Boolean
+    isVerified: Boolean
+    accessToken: String
+    refreshToken: String,
+    isPasswordCorrect(password: string) : boolean,
+    generateRefreshToken(): string,
+    generateAccessToken(): string,
+}
+
 
 const userSchema = new Schema({
     avatar: {
@@ -38,14 +59,6 @@ const userSchema = new Schema({
         type: Number,
         default: 0
     },
-    posts: [{
-        type: Schema.Types.ObjectId,
-        ref: "post"
-    }],
-    chats: [{
-        type: Schema.Types.ObjectId,
-        ref: "chats"
-    }],
     isBlueTick: {
         type: Boolean,
         default: false,
@@ -57,8 +70,44 @@ const userSchema = new Schema({
     accessToken: String,
     refreshToken: String,
 },
-{
-    timestamps: true
+    {
+        timestamps: true
+    })
+
+
+userSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next()
+    this.password = await bcrypt.hash(this.password, 10)
 })
 
-export const User = mongoose.model("user", userSchema)
+userSchema.methods.isPasswordCorrect = async function (password: string) {
+    return await bcrypt.compare(password, this.password)
+}
+
+userSchema.methods.generateAccessToken = async function () {
+    return jwt.sign({
+        _id: this._id,
+        fullName: this.fullName,
+        email: this.email,
+        username: this.username
+    },
+        process.env.ACCESS_TOKEN_SECRET as string,
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        })
+}
+
+userSchema.methods.generateRefreshToken = async function () {
+    return jwt.sign({
+        _id: this._id,
+        fullName: this.fullName,
+        email: this.email,
+        username: this.username
+    },
+        process.env.REFRESH_TOKEN_SECRET as string,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+        })
+}
+
+export const User = mongoose.model<UserInterface>("user", userSchema)

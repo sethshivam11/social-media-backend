@@ -1,4 +1,9 @@
-import mongoose, { Schema } from "mongoose"
+import mongoose, { Schema, Document } from "mongoose"
+
+interface ReactionInterface extends Document {
+    content: String
+    user: String
+}
 
 const reactionSchema = new Schema({
     content: {
@@ -12,4 +17,4 @@ const reactionSchema = new Schema({
     timestamps: true,
 })
 
-export const Reactions = mongoose.model("reaction", reactionSchema)
+export const Reactions = mongoose.model<ReactionInterface>("reaction", reactionSchema)
