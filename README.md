@@ -1,5 +1,5 @@
 
-# SocioBlaze
+# Sociial
 
 A social media project built on MERN Stack (MongoDB, ExpressJS, ReactJS, NodeJS) is a powerful application which provides users to connect through realtime chats
 
@@ -10,13 +10,13 @@ A social media project built on MERN Stack (MongoDB, ExpressJS, ReactJS, NodeJS)
 Clone the project
 
 ```bash
-  git clone https://github.com/sethshivam11/socioblaze.git
+  git clone https://github.com/sethshivam11/sociial.git
 ```
 
 Go to the project directory
 
 ```bash
-  cd socioblaze
+  cd sociial
 ```
 
 Install dependencies
