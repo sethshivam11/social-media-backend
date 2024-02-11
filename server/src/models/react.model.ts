@@ -1,11 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose"
 
-interface ReactionInterface extends Document {
+interface ReactInterface extends Document {
     content: String
     user: String
 }
 
-const reactionSchema = new Schema({
+const reactSchema = new Schema({
     content: {
         type: String,
     },
@@ -17,4 +17,4 @@ const reactionSchema = new Schema({
     timestamps: true,
 })
 
-export const Reactions = mongoose.model<ReactionInterface>("reaction", reactionSchema)
+export const React = mongoose.model<ReactInterface>("react", reactSchema)

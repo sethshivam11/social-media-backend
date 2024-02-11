@@ -25,9 +25,7 @@ const chatSchema = new Schema({
         type: String,
         default: "personal"
     },
-    groupIcon: {
-        type: String,
-    }
+    groupIcon: String,
 }, {
     timestamps: true
 })

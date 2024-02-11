@@ -13,7 +13,7 @@ const uploadToCloudinary = async (localFilePath: string) => {
         
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "auto",
-            upload_preset: "socioblaze"
+            upload_preset: "sociial"
         })
 
         fs.unlinkSync(localFilePath)
@@ -21,7 +21,7 @@ const uploadToCloudinary = async (localFilePath: string) => {
         return response
 
     } catch (err) {
-        console.log("Error occured while uploading to clouinary\n", err)
+        console.log("Error occured while uploading to cloudinary\n", err)
         fs.unlinkSync(localFilePath)
     }
 }

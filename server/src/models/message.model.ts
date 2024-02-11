@@ -22,11 +22,15 @@ const messageSchema = new Schema({
         type: String,
         required: true,
     },
+    attachments:
+        [{
+            url: String,
+        }],
     viewOnce: {
-        type: String,
+        type: Boolean,
         default: false,
     }
-},{
+}, {
     timestamps: true,
 })
 

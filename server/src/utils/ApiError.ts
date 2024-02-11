@@ -3,7 +3,8 @@ interface ApiError {
     message: string;
     data: null;
     success: boolean;
-    errors: string[]
+    errors: string[],
+    stack?: string
 }
 
 
