@@ -19,12 +19,7 @@ const httpServer = createServer(app)
 
 const io = new Server(httpServer)
 
-io.on("connection", (socket) => {
-    console.log("New user joined", socket.id)
-    socket.on("disconnect", () => {
-        console.log("User left", socket.id)
-    })
-})
+app.set("io", io)
 
 
 app.use(express.json({ limit: "50kb" }))
@@ -35,6 +30,7 @@ app.use(cookieParser())
 // Route imports
 import userRouter from "./routes/user.route"
 import followRouter from "./routes/follow.route"
+import initializeSocket from "./socket"
 
 
 
@@ -44,13 +40,13 @@ app.use("/api/v1/follow", followRouter)
 
 
 
-// Deployments
+// Deployment
 const __dirname1 = path.resolve()
 
 if (process.env.NODE_ENV === "production") {
-    app.use(express.static(path.join(__dirname1, "client")))
+    app.use(express.static(path.join(__dirname1, "client", "dist")))
     app.get("*", (_: Request, res: Response) => {
-        res.sendFile(path.resolve(__dirname1, "client", "index.html"))
+        res.sendFile(path.resolve(__dirname1, "client", "dist", "index.html"))
     })
 }
 
@@ -59,6 +55,8 @@ else {
         res.send("App is under development!")
     })
 }
+
+initializeSocket(io)
 
 app.use(errorHandler)
 

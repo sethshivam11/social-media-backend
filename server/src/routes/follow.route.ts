@@ -4,8 +4,10 @@ import { follow, unfollow } from "../controllers/follow.controller";
 
 const router = Router()
 
-router.route("/follow/:followee").get(verifyJWT, follow)
+router.use(verifyJWT)
 
-router.route("/follow/:unfollowee").get(verifyJWT, unfollow)
+router.route("/follow/:followee").get(follow)
+
+router.route("/follow/:unfollowee").get(unfollow)
 
 export default router

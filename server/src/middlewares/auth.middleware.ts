@@ -28,6 +28,8 @@ const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
 
         req.user = user
 
+        next()
+
     } catch (error) {
         let message = "Something went wrong while verifying the user"
 

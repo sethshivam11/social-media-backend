@@ -32,15 +32,23 @@ const deleteFromCloudinary = async (cloudFileLink: string) => {
 
         const urlArray = cloudFileLink.split("/")
         const publicId = urlArray[urlArray?.length - 1].split(".")[0]
+        console.log(publicId)
 
-        const response = await cloudinary.uploader.destroy(publicId)
+        const response = await cloudinary.uploader.destroy(`sociial/${publicId}`)
 
         if (response?.result === "ok") return true
+        console.log(response)
 
     } catch (err) {
         return false
     }
 }
 
+const recordFileLink = (cloudFileLink: string) => {
+    fs.appendFile("./server/public/undeletedFiles.txt", cloudFileLink, function (err) {
+        if(err) throw err
+    })
+}
 
-export { uploadToCloudinary, deleteFromCloudinary }
+
+export { uploadToCloudinary, deleteFromCloudinary, recordFileLink }

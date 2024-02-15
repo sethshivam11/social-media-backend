@@ -18,13 +18,14 @@ router.route("/verifyMail").get(verifyJWT, verifyEmail)
 
 router.route("/logout").post(verifyJWT, logoutUser)
 
-router.route("/updateAvatar").post(
+router.route("/updateAvatar").patch(
+    verifyJWT,
     upload.single("avatar"),
     updateAvatar)
 
 router.route("/updateDetails").post(verifyJWT, updateDetails)
 
-router.route("/changePassword").post(verifyJWT, updatePassword)
+router.route("/changePassword").patch(verifyJWT, updatePassword)
 
 router.route("/updateBlue").get(verifyJWT, updateBlueTickStatus)
 

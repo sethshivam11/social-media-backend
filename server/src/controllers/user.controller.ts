@@ -3,7 +3,7 @@ import { ApiResponse } from "../utils/ApiResponse"
 import { User, UserInterface } from "../models/user.model"
 import { Request, Response } from "express"
 import { asyncHandler } from "../utils/AsyncHandler"
-import { uploadToCloudinary } from "../utils/cloudinary"
+import { deleteFromCloudinary, uploadToCloudinary, recordFileLink } from "../utils/cloudinary"
 import jwt from "jsonwebtoken"
 
 interface File {
@@ -140,6 +140,7 @@ const getCurrentUser = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
+
         return res.status(200).json(
             new ApiResponse(200, req.user, "User found")
         )
@@ -213,7 +214,7 @@ const updatePassword = asyncHandler(
         }
 
         user.password = newPassword
-        user.save()
+        await user.save()
         user.password = ""
         user.refreshToken = ""
 
@@ -239,7 +240,13 @@ const updateAvatar = asyncHandler(
             throw new ApiError(400, "Something went wrong, while uploading to cloudinary")
         }
 
-        const user = await User.findByIdAndUpdate(_id, { $set: { avatar } }, { new: true })
+        // Delete file from cloudinary / record if not deleted
+        const deletePrevAvatar = await deleteFromCloudinary(req.user.avatar as string)
+        if (!deletePrevAvatar) {
+            recordFileLink(req.user.avatar as string)
+        }
+
+        const user = await User.findByIdAndUpdate(_id, { $set: { avatar: avatar.secure_url } }, { new: true })
         if (!user) {
             throw new ApiError(400, "Something went wrong, while updating avatar")
         }
