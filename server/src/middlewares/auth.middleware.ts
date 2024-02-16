@@ -6,7 +6,7 @@ import { User } from "../models/user.model";
 
 const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
     try {
-        const token = req.header("Authorization")?.replace("Bearer ", "") || req.cookies("accessToken")
+        const token = req.header("Authorization")?.replace("Bearer ", "") || req.cookies?.accessToken
 
         if (!token) {
             throw new ApiError(400, "Token is required")
@@ -23,10 +23,12 @@ const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
         if (!user) {
             throw new ApiError(400, "User not found")
         }
-        user.refreshToken = ""
-        user.password = ""
 
-        req.user = user
+        const removeSensitiveData = user.toObject()
+        delete removeSensitiveData.password
+        delete removeSensitiveData.refreshToken
+
+        req.user = removeSensitiveData
 
         next()
 

@@ -1,13 +1,17 @@
 import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
-import { follow, unfollow } from "../controllers/follow.controller";
+import { follow, getFollowers, unfollow, getFollowing } from "../controllers/follow.controller";
 
 const router = Router()
 
 router.use(verifyJWT)
 
-router.route("/follow/:followee").get(follow)
+router.route("/").post(follow)
 
-router.route("/follow/:unfollowee").get(unfollow)
+router.route("/unfollow").post(unfollow)
+
+router.route("/getFollowers").get(getFollowers)
+
+router.route("/getFollowing").get(getFollowing)
 
 export default router

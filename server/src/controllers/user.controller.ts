@@ -5,8 +5,9 @@ import { Request, Response } from "express"
 import { asyncHandler } from "../utils/AsyncHandler"
 import { deleteFromCloudinary, uploadToCloudinary, recordFileLink } from "../utils/cloudinary"
 import jwt from "jsonwebtoken"
+import { DEFAULT_USER_AVATAR } from "../constants"
 
-interface File {
+export interface File {
     fieldname: string,
     originalname: string,
     encoding: string,
@@ -18,9 +19,19 @@ interface File {
 }
 
 
+// Helper functions and objects
+
 const options = {
     httpOnly: true,
     secure: true
+}
+
+const removeSensitiveData = (user: UserInterface) => {
+    const newUser = user.toObject()
+    delete newUser.password
+    delete newUser.refreshToken
+
+    return newUser
 }
 
 const generateAccessAndRefreshToken = async (userId: string) => {
@@ -45,6 +56,9 @@ const generateAccessAndRefreshToken = async (userId: string) => {
     }
 }
 
+
+// Controllers
+
 const registerUser = asyncHandler(
     async (req: Request, res: Response) => {
         const { fullName, username, email, password } = req.body
@@ -61,19 +75,17 @@ const registerUser = asyncHandler(
         })
 
         if (existedUser) {
-            throw new ApiError(409, "User username or email already exists")
+            throw new ApiError(409, "Username or email already exists")
         }
 
         const avatarLocalPath = (req.file as File)?.path
-
+        let avatar;
         if (avatarLocalPath) {
-            throw new ApiError(400, "Avatar file is required")
-        }
+            avatar = await uploadToCloudinary(avatarLocalPath)
 
-        const avatar = await uploadToCloudinary(avatarLocalPath)
-
-        if (!avatar) {
-            throw new ApiError(400, "Error while uploading the avatar file")
+            if (!avatar) {
+                throw new ApiError(400, "Error while uploading the avatar file")
+            }
         }
 
         const user = await User.create({
@@ -87,11 +99,11 @@ const registerUser = asyncHandler(
         if (!user) {
             throw new ApiError(400, "Something went wrong while registering the user")
         }
-        user.password = ""
-        user.refreshToken = ""
+
+        const newUser = removeSensitiveData(user)
 
         return res.status(201).json(
-            new ApiResponse(200, user, "User registered successfully")
+            new ApiResponse(200, newUser, "User registered successfully")
         )
     }
 )
@@ -118,9 +130,10 @@ const loginUser = asyncHandler(
             throw new ApiError(401, "Invalid passsword")
         }
 
-        user.password = ""
-        user.refreshToken = ""
+
         const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
+
+        const userObj = removeSensitiveData(user)
 
         return res
             .status(200)
@@ -128,7 +141,7 @@ const loginUser = asyncHandler(
             .cookie("refreshToken", refreshToken, options)
             .json(
                 new ApiResponse(200, {
-                    user,
+                    user: userObj,
                     accessToken,
                     refreshToken
                 }, "User logged in successfully")
@@ -161,11 +174,11 @@ const verifyEmail = asyncHandler(
         if (!user) {
             throw new ApiError(404, "User not found")
         }
-        user.password = ""
-        user.refreshToken = ""
+
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
-            new ApiResponse(200, user, "User verified")
+            new ApiResponse(200, newUser, "User verified")
         )
     })
 
@@ -183,11 +196,11 @@ const logoutUser = asyncHandler(
             throw new ApiError(404, "User not found")
         }
 
-        user.password = ""
         user.refreshToken = ""
+        await user.save({ validateBeforeSave: false })
 
         return res.status(200).json(
-            new ApiResponse(200, user, "User logged out")
+            new ApiResponse(200, {}, "User logged out")
         )
     })
 
@@ -203,6 +216,10 @@ const updatePassword = asyncHandler(
             throw new ApiError(400, "Both passwords are required")
         }
 
+        if (oldPassword === newPassword) {
+            throw new ApiError(400, "Old and new passwords cannot be same")
+        }
+
         const user = await User.findById(_id)
         if (!user) {
             throw new ApiError(404, "User not found")
@@ -215,11 +232,11 @@ const updatePassword = asyncHandler(
 
         user.password = newPassword
         await user.save()
-        user.password = ""
-        user.refreshToken = ""
+
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
-            new ApiResponse(200, user, "Password was changed")
+            new ApiResponse(200, newUser, "Password was changed")
         )
     })
 
@@ -251,11 +268,38 @@ const updateAvatar = asyncHandler(
             throw new ApiError(400, "Something went wrong, while updating avatar")
         }
 
-        user.password = ""
-        user.refreshToken = ""
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
-            new ApiResponse(200, user, "Avatar updated")
+            new ApiResponse(200, newUser, "Avatar updated")
+        )
+    })
+
+const removeAvatar = asyncHandler(
+    async (req: Request, res: Response) => {
+        if (!req.user) {
+            throw new ApiError(401, "User not verified")
+        }
+
+        const { _id } = req.user
+
+        const user = await User.findById(_id)
+        if (!user) {
+            throw new ApiError(404, "User not found")
+        }
+
+        const deletePrevAvatar = await deleteFromCloudinary(user.avatar as string)
+        if (!deletePrevAvatar) {
+            recordFileLink(user.avatar as string)
+        }
+
+        user.avatar = DEFAULT_USER_AVATAR
+        await user.save({ validateBeforeSave: false })
+
+        const newUser = removeSensitiveData(user)
+
+        return res.status(200).json(
+            new ApiResponse(200, newUser, "Avatar removed")
         )
     })
 
@@ -273,8 +317,8 @@ const updateDetails = asyncHandler(
             throw new ApiError(404, "User not found")
         }
 
+        if(!(bio === undefined)) user.bio = bio
         if (fullName) user.fullName = fullName
-        if (bio) user.bio = bio
 
         if (email) {
             const checkEmail = await User.findOne({ email })
@@ -296,11 +340,10 @@ const updateDetails = asyncHandler(
 
         await user.save({ validateBeforeSave: false })
 
-        user.password = ""
-        user.refreshToken = ""
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
-            new ApiResponse(200, user, "user details updated")
+            new ApiResponse(200, newUser, "user details updated")
         )
     })
 
@@ -320,11 +363,10 @@ const updateBlueTickStatus = asyncHandler(
 
         await user.save({ validateBeforeSave: false })
 
-        user.password = ""
-        user.refreshToken = ""
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
-            new ApiResponse(200, user, "User's blue tick updated")
+            new ApiResponse(200, newUser, "User's blue tick updated")
         )
     })
 
@@ -345,14 +387,17 @@ const blockUser = asyncHandler(
             throw new ApiError(404, "User not found")
         }
 
+        if (user.blocked.includes(blockUserId)) {
+            throw new ApiError(409, "User already blocked")
+        }
+
         user.blocked = [...user.blocked, blockUserId]
         await user.save({ validateBeforeSave: false })
 
-        user.password = ""
-        user.refreshToken = ""
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
-            new ApiResponse(200, user, "User was blocked")
+            new ApiResponse(200, newUser, "User was blocked")
         )
     })
 
@@ -373,14 +418,13 @@ const unblockUser = asyncHandler(
             throw new ApiError(404, "User not found")
         }
 
-        user.blocked = user.blocked.filter((blockedUser) => blockedUser !== unblockUserId)
-        user.save({ validateBeforeSave: false })
+        user.blocked = user.blocked.filter((ele) => ele.toString() !== unblockUserId.toString())
+        await user.save({ validateBeforeSave: false })
 
-        user.password = ""
-        user.refreshToken = ""
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
-            new ApiResponse(200, user, "User was unblocked")
+            new ApiResponse(200, newUser, "User was unblocked")
         )
     })
 
@@ -410,12 +454,11 @@ const renewAccessToken = asyncHandler(
             throw new ApiError(400, "Something went wrong, while renewing accessToken")
         }
 
-        user.password = ""
-        user.refreshToken = ""
+        const newUser = removeSensitiveData(user)
 
         return res.status(200).json(
             new ApiResponse(200, {
-                user, accessToken
+                user: newUser, accessToken
             }, "Access token was renewed")
         )
     })
@@ -441,6 +484,7 @@ export {
     verifyEmail,
     logoutUser,
     updateAvatar,
+    removeAvatar,
     updatePassword,
     updateDetails,
     updateBlueTickStatus,

@@ -8,11 +8,18 @@ interface ReactInterface extends Document {
 const reactSchema = new Schema({
     content: {
         type: String,
+        default: "❤️"
     },
     user: {
         type: Schema.Types.ObjectId,
         required: true,
+        ref: "user"
     },
+    post: {
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: "post"
+    }
 }, {
     timestamps: true,
 })

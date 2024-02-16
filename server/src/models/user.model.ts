@@ -1,20 +1,21 @@
 import mongoose, { Schema, Document } from "mongoose"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import { DEFAULT_USER_AVATAR } from "../constants"
 
 export interface UserInterface extends Document {
     avatar: String
     fullName: String
     username: String,
     email: String
-    password: String
+    password?: String
     bio: String
     blocked: string[],
     followingCount: Number
     followersCount: Number
     isBlueTick: Boolean
     isMailVerified: Boolean
-    refreshToken: String,
+    refreshToken?: String,
     isPasswordCorrect(password: string): boolean,
     generateRefreshToken(): string,
     generateAccessToken(): string,
@@ -24,6 +25,7 @@ export interface UserInterface extends Document {
 const userSchema = new Schema({
     avatar: {
         type: String,
+        default: DEFAULT_USER_AVATAR,
     },
     fullName: {
         type: String,

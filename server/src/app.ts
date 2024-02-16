@@ -5,6 +5,7 @@ import errorHandler from "./middlewares/error.middleware"
 import { UserInterface } from "./models/user.model"
 import { createServer } from "http"
 import { Server } from "socket.io"
+import initializeSocket from "./socket"
 
 
 declare module "express" {
@@ -30,14 +31,13 @@ app.use(cookieParser())
 // Route imports
 import userRouter from "./routes/user.route"
 import followRouter from "./routes/follow.route"
-import initializeSocket from "./socket"
-
+import postRouter from "./routes/post.route"
 
 
 // Routes declarations
 app.use("/api/v1/users", userRouter)
 app.use("/api/v1/follow", followRouter)
-
+app.use("/api/v1/posts", postRouter)
 
 
 // Deployment

@@ -1,12 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose"
+import { React } from "./react.model"
 
 interface PostInterface extends Document {
     user: String,
     caption: String,
     media: String,
     tags: String[],
-    likesCount: Number,
-    commentsCount: Number
+    reactsCount: Number,
+    commentsCount: Number,
+    likePost(liker: string): Promise<PostInterface>
 }
 
 const postSchema = new Schema({
@@ -19,6 +21,7 @@ const postSchema = new Schema({
     },
     media: {
         type: String,
+        required: true
     },
     tags: [{
         type: Schema.Types.ObjectId,
@@ -35,5 +38,15 @@ const postSchema = new Schema({
 }, {
     timestamps: true
 })
+
+postSchema.methods.likePost = async function (userId: String) {
+    this.reactsCount += 1
+    await this.save()
+    await React.create({
+        user: userId,
+        post: this._id
+    })
+    return this
+}
 
 export const Post = mongoose.model<PostInterface>("post", postSchema)

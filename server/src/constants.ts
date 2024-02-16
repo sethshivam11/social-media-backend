@@ -11,6 +11,14 @@ export const ChatEventEnum = Object.freeze(
         GROUP_NAME_UPDATE_EVENT: "updateGroupName"
     })
 
+export const PostEventEnum = "newPost"
+
+export const DB_NAME = "sociial"
+
+export const DEFAULT_USER_AVATAR = "https://res.cloudinary.com/dv3qbj0bn/image/upload/v1708096087/sociial/tpfx0gzsk7ywiptsb6vl.png"
+
+export const DEFAULT_GROUP_ICON = "https://res.cloudinary.com/dv3qbj0bn/image/upload/v1708097524/sociial/ikuname8uljxeasstnjy.png"
+
 export const UserRoleEnum = Object.freeze(
     {
         ADMIN: "admin",
