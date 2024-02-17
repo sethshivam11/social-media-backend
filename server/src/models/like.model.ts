@@ -1,11 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose"
 
-interface ReactInterface extends Document {
+interface LikeInterface extends Document {
     content: String
     user: String
 }
 
-const reactSchema = new Schema({
+const likeSchema = new Schema({
     content: {
         type: String,
         default: "❤️"
@@ -24,4 +24,4 @@ const reactSchema = new Schema({
     timestamps: true,
 })
 
-export const React = mongoose.model<ReactInterface>("react", reactSchema)
+export const Like = mongoose.model<LikeInterface>("react", likeSchema)

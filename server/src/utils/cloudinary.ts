@@ -51,7 +51,7 @@ const deleteFromCloudinary = async (cloudFileLink: string) => {
 }
 
 const recordFileLink = (cloudFileLink: string) => {
-    fs.appendFile("./server/public/undeletedFiles.txt", cloudFileLink, function (err) {
+    fs.appendFile("./server/public/undeletedFiles.txt", `${cloudFileLink}\n`, function (err) {
         if (err) console.log(err)
     })
 }

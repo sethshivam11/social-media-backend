@@ -29,7 +29,21 @@ const messageSchema = new Schema({
     viewOnce: {
         type: Boolean,
         default: false,
-    }
+    },
+    reacts: [{
+        content: {
+            type: String,
+            default: "❤️"
+        },
+        user: {
+            type: Schema.Types.ObjectId,
+            ref: "user",
+        }
+    }],
+    readBy: [{
+        type: Schema.Types.ObjectId,
+        ref: "user",
+    }]
 }, {
     timestamps: true,
 })

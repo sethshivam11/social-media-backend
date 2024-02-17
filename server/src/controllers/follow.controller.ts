@@ -13,7 +13,7 @@ const follow = asyncHandler(
 
         const { followee } = req.body
         if (!followee) {
-            throw new ApiError(400, "Follower is required")
+            throw new ApiError(400, "Followee is required")
         }
 
         const follow: FollowInterface | null = await Follow.findOne({ user: _id })
@@ -60,7 +60,7 @@ const unfollow = asyncHandler(
 
         const { unfollowee } = req.body
         if (!unfollowee) {
-            throw new ApiError(400, "Following is required")
+            throw new ApiError(400, "Unfollowee is required")
         }
 
         const follow: FollowInterface | null = await Follow.findOne({ user: _id })

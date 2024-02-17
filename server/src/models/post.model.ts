@@ -1,14 +1,18 @@
 import mongoose, { Schema, Document } from "mongoose"
-import { React } from "./react.model"
+import { Like } from "./like.model"
+import { User } from "./user.model"
 
 interface PostInterface extends Document {
     user: String,
     caption: String,
     media: String,
     tags: String[],
-    reactsCount: Number,
+    likesCount: Number,
     commentsCount: Number,
-    likePost(liker: string): Promise<PostInterface>
+    likePost(liker: string): Promise<PostInterface> | string,
+    dislikePost(disliker: string): Promise<PostInterface> | string,
+    post(): Promise<PostInterface>,
+    updatePostCount(): Promise<PostInterface>,
 }
 
 const postSchema = new Schema({
@@ -27,7 +31,7 @@ const postSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "user"
     }],
-    reactsCount: {
+    likesCount: {
         type: Number,
         default: 0
     },
@@ -39,14 +43,51 @@ const postSchema = new Schema({
     timestamps: true
 })
 
-postSchema.methods.likePost = async function (userId: String) {
-    this.reactsCount += 1
-    await this.save()
-    await React.create({
-        user: userId,
-        post: this._id
-    })
+postSchema.methods.updatePostCount = async function () {
+    await User.findByIdAndUpdate(
+        this.user,
+        {
+            $inc: { postsCount: 1 }
+        },
+        { new: true })
     return this
 }
+
+postSchema.methods.likePost = async function (liker: String) {
+    const react = await Like.findOne({ user: liker, post: this._id })
+    if (react) {
+        return "You have already liked this post"
+    }
+
+    await Like.create({
+        user: liker,
+        post: this._id
+    })
+
+    this.reactsCount += 1
+    await this.save()
+
+    return this
+}
+
+postSchema.methods.dislikePost = async function (disliker: String) {
+    const react = await Like.findOne({ user: disliker, post: this._id })
+
+    if (!react) {
+        return "You have already disliked this post"
+    }
+
+    if (this.reactsCount > 0) {
+        this.reactsCount -= 1
+    }
+
+    await this.save()
+    await react.deleteOne()
+
+    return this
+}
+
+
+
 
 export const Post = mongoose.model<PostInterface>("post", postSchema)

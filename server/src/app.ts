@@ -32,12 +32,16 @@ app.use(cookieParser())
 import userRouter from "./routes/user.route"
 import followRouter from "./routes/follow.route"
 import postRouter from "./routes/post.route"
+import commmentRouter from "./routes/comment.route"
+import chatRouter from "./routes/chat.route"
 
 
 // Routes declarations
 app.use("/api/v1/users", userRouter)
 app.use("/api/v1/follow", followRouter)
 app.use("/api/v1/posts", postRouter)
+app.use("/api/v1/comments", commmentRouter)
+app.use("/api/v1/chats", chatRouter)
 
 
 // Deployment

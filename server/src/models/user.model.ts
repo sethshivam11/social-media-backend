@@ -13,6 +13,7 @@ export interface UserInterface extends Document {
     blocked: string[],
     followingCount: Number
     followersCount: Number
+    postsCount: Number
     isBlueTick: Boolean
     isMailVerified: Boolean
     refreshToken?: String,
@@ -58,6 +59,10 @@ const userSchema = new Schema({
         default: 0
     },
     followersCount: {
+        type: Number,
+        default: 0
+    },
+    postsCount: {
         type: Number,
         default: 0
     },
