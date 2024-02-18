@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse";
 import { Post } from "../models/post.model";
 import { File } from "./user.controller";
 import { deleteFromCloudinary, recordFileLink, uploadToCloudinary } from "../utils/cloudinary";
+import { follow } from "./follow.controller";
 
 const createPost = asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) {
@@ -142,12 +143,12 @@ const createFeed = asyncHandler(
         }
 
         const posts = await Post.find()
-            .populate({
-                path: "user",
-                model: "user",
-                select: "username avatar",
-                strictPopulate: false
-            }).sort({ createdAt: -1 })
+        .populate({
+            path: "user",
+            model: "user",
+            select: "username avatar",
+            strictPopulate: false
+        }).sort({ createdAt: -1 })
         if (!posts || posts.length === 0) {
             throw new ApiError(404, "No posts found")
         }
@@ -190,9 +191,9 @@ const dislikePost = asyncHandler(
             throw new ApiError(401, "User not verified")
         }
         const { _id } = req.user
-        
+
         const { postId } = req.params
-        if(!postId){
+        if (!postId) {
             throw new ApiError(400, "Post id is required")
         }
 

@@ -31,7 +31,7 @@ router.route("/updateAvatar").patch(
 
 router.route("/removeAvatar").get(verifyJWT, removeAvatar)
 
-router.route("/updateDetails").post(verifyJWT, updateDetails)
+router.route("/updateDetails").put(verifyJWT, updateDetails)
 
 router.route("/changePassword").patch(verifyJWT, updatePassword)
 
@@ -41,6 +41,6 @@ router.route("/block/:blockUserId").get(verifyJWT, blockUser)
 
 router.route("/unblock/:unblockUserId").get(verifyJWT, unblockUser)
 
-router.route("/renewAccessToken").post(verifyJWT, renewAccessToken)
+router.route("/renewAccessToken").post(renewAccessToken)
 
 export default router

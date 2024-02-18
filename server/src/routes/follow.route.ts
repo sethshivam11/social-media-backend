@@ -6,7 +6,7 @@ const router = Router()
 
 router.use(verifyJWT)
 
-router.route("/").post(follow)
+router.route("/new").post(follow)
 
 router.route("/unfollow").post(unfollow)
 

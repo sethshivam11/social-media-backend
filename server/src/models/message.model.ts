@@ -4,7 +4,8 @@ interface MessageInterface extends Document {
     sender: String,
     chat: String,
     content: String,
-    viewOnce: Boolean
+    viewOnce: Boolean,
+    reacts: { content: string, user: string }[],
 }
 
 const messageSchema = new Schema({
@@ -26,20 +27,7 @@ const messageSchema = new Schema({
         [{
             url: String,
         }],
-    viewOnce: {
-        type: Boolean,
-        default: false,
-    },
-    reacts: [{
-        content: {
-            type: String,
-            default: "❤️"
-        },
-        user: {
-            type: Schema.Types.ObjectId,
-            ref: "user",
-        }
-    }],
+    reacts: Array,
     readBy: [{
         type: Schema.Types.ObjectId,
         ref: "user",

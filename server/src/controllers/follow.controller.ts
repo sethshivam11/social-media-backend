@@ -31,7 +31,7 @@ const follow = asyncHandler(
             await newFollow.follow(followee)
 
             return res.status(200).json(
-                new ApiResponse(200, newFollow, "Follower updated")
+                new ApiResponse(200, newFollow, "Followed user")
             )
         }
 
@@ -46,7 +46,7 @@ const follow = asyncHandler(
                 await follow.follow(followee))
 
             return res.status(200).json(
-                new ApiResponse(200, follow, "Follow updated")
+                new ApiResponse(200, follow, "Followed user")
             )
         }
     })
@@ -73,14 +73,13 @@ const unfollow = asyncHandler(
             throw new ApiError(404, "Follower already unfollowed")
         }
 
-        follow.followings = follow.followings.filter((follower) => follower !== unfollowee)
-
-        await follow.save().then(async () =>
-            await follow.unfollow(unfollowee)
-        )
+        await follow.updateOne({ $pull: { followings: unfollowee } }, { new: true })
+            .then(async () =>
+                await follow.unfollow(unfollowee)
+            )
 
         return res.status(200).json(
-            new ApiResponse(200, follow, "Following updated")
+            new ApiResponse(200, {}, "Unfollowed user")
         )
     })
 

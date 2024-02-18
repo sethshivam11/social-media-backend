@@ -73,6 +73,12 @@ const getChats = asyncHandler(
             throw new ApiError(401, "User not verified")
         }
         const { _id } = req.user
+        const { page } = req.query
+
+        let pageNo = 1
+        if (page) {
+            pageNo = parseInt(page as string)
+        }
 
         const chats = await Chat.find({ users: _id })
             .populate({
@@ -80,8 +86,11 @@ const getChats = asyncHandler(
                 select: "name username avatar",
                 model: "user",
                 strictPopulate: false,
-                options: { limit: 4, sort: { updatedAt: -1 } }
+                options: { limit: 2, sort: { updatedAt: -1 } }
             })
+            .limit(10)
+            .skip((pageNo - 1) * 10)
+
         if (!chats) {
             throw new ApiError(404, "No chats found")
         }
@@ -114,7 +123,7 @@ const addParticipants = asyncHandler(
 
         participants.forEach((participant: string) => {
             if (chat.users.includes(participant)) {
-                throw new ApiError(400, "Some participant already exists")
+                throw new ApiError(400, "Some participants already exists")
             }
         })
 
@@ -146,6 +155,12 @@ const removeParticipants = asyncHandler(
         if (!chats.admin.includes(_id)) {
             throw new ApiError(403, "You are not authorized to remove participants")
         }
+
+        participants.forEach((participant: string) => {
+            if (!chats.users.includes(participant)) {
+                throw new ApiError(400, "Some participants are already not in group")
+            }
+        })
 
         await chats.updateOne({ $pull: { users: { $in: participants } } })
 
@@ -213,7 +228,7 @@ const deleteGroup = asyncHandler(
 
         const chat = await Chat.findById(chatId)
         if (!chat) {
-            throw new ApiError(404, "Chat not found")
+            throw new ApiError(404, "Group not found")
         }
 
         if (!chat.admin.includes(_id)) {
@@ -307,6 +322,10 @@ const makeAdmin = asyncHandler(
             throw new ApiError(403, "You are not authorized to make admin")
         }
 
+        if (!chat.users.includes(userId)) {
+            throw new ApiError(400, "User is not in the group")
+        }
+
         if (chat.admin.includes(userId)) {
             throw new ApiError(400, "User is already an admin")
         }
@@ -338,6 +357,10 @@ const removeAdmin = asyncHandler(
 
         if (!chat.admin.includes(_id)) {
             throw new ApiError(403, "You are not authorized to make admin")
+        }
+
+        if (!chat.users.includes(userId)) {
+            throw new ApiError(400, "User is not in the group")
         }
 
         if (!chat.admin.includes(userId)) {

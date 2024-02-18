@@ -34,6 +34,7 @@ import followRouter from "./routes/follow.route"
 import postRouter from "./routes/post.route"
 import commmentRouter from "./routes/comment.route"
 import chatRouter from "./routes/chat.route"
+import messageRouter from "./routes/message.route"
 
 
 // Routes declarations
@@ -42,6 +43,7 @@ app.use("/api/v1/follow", followRouter)
 app.use("/api/v1/posts", postRouter)
 app.use("/api/v1/comments", commmentRouter)
 app.use("/api/v1/chats", chatRouter)
+app.use("/api/v1/messages", messageRouter)
 
 
 // Deployment
