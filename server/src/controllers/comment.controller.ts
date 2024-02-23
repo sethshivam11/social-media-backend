@@ -4,17 +4,29 @@ import { ApiError } from "../utils/ApiError";
 import { Comment } from "../models/comment.model";
 import { ApiResponse } from "../utils/ApiResponse";
 
+const limit = 20;
+let pageNo = 1;
+
 const getAllComments = asyncHandler(
     async (req: Request, res: Response) => {
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
         const { postId } = req.params
+        const { page } = req.query
         if (!postId) {
             throw new ApiError(400, "Post id is required")
         }
+        if (page) {
+            pageNo = parseInt(page as string)
+            if (pageNo <= 0) {
+                pageNo = 1
+            }
+        }
 
         const comments = await Comment.find({ post: postId })
+            .limit(limit)
+            .skip((pageNo - 1) * limit)
         if (!comments || comments.length === 0) {
             throw new ApiError(404, "No comments found")
         }

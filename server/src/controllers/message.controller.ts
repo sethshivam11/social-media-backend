@@ -6,6 +6,10 @@ import { File } from "./user.controller";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { ApiResponse } from "../utils/ApiResponse";
 
+// limit number of messages for pagination
+const limit = 40;
+let pageNo = 1;
+
 const sendMessage = asyncHandler(
     async (req: Request, res: Response) => {
         if (!req.user) {
@@ -103,7 +107,7 @@ const unreactMessage = asyncHandler(
         }
 
         const exists = message.reacts.some((react: { content: string, user: string }) => react.user.toString() === _id.toString())
-        if(!exists) {
+        if (!exists) {
             throw new ApiError(400, "You already unreacted to this message")
         }
 
@@ -153,16 +157,18 @@ const getMessages = asyncHandler(
             throw new ApiError(400, "ChatId is required")
         }
 
-        let pageNo = 1
         if (page) {
             pageNo = parseInt(page as string)
+            if (pageNo <= 0) {
+                pageNo = 1
+            }
         }
 
         const messages = await Message.find({ chat: chatId })
             .populate("sender", "username avatar")
             .sort({ createdAt: -1 })
-            .limit(20)
-            .skip((pageNo - 1) * 20)
+            .limit(limit)
+            .skip((pageNo - 1) * limit)
 
         if (messages.length === 0 || !messages) {
             throw new ApiError(404, "No messages found")
@@ -209,9 +215,18 @@ const getReactions = asyncHandler(
         }
 
         const { messageId } = req.params
+        const { page } = req.query
         if (!messageId) {
             throw new ApiError(400, "Message is required")
         }
+
+        if (page) {
+            pageNo = parseInt(page as string)
+            if (pageNo <= 0) {
+                pageNo = 1
+            }
+        }
+
 
         const message = await Message.findById(messageId).populate({
             path: "reacts",
@@ -222,6 +237,10 @@ const getReactions = asyncHandler(
             },
             strictPopulate: false
         })
+            .limit(limit)
+            .skip((pageNo - 1) * limit)
+
+
         if (!message) {
             throw new ApiError(404, "Message not found")
         }

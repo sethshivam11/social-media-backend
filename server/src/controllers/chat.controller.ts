@@ -7,6 +7,11 @@ import { File } from "./user.controller";
 import { deleteFromCloudinary, recordFileLink, uploadToCloudinary } from "../utils/cloudinary";
 import { DEFAULT_GROUP_ICON } from "../constants";
 
+
+// limit number of chats for pagination
+const limit = 20;
+let pageNo = 1;
+
 const createOneToOneChat = asyncHandler(
     async (req: Request, res: Response) => {
         if (!req.user) {
@@ -75,7 +80,6 @@ const getChats = asyncHandler(
         const { _id } = req.user
         const { page } = req.query
 
-        let pageNo = 1
         if (page) {
             pageNo = parseInt(page as string)
         }
@@ -88,8 +92,8 @@ const getChats = asyncHandler(
                 strictPopulate: false,
                 options: { limit: 2, sort: { updatedAt: -1 } }
             })
-            .limit(10)
-            .skip((pageNo - 1) * 10)
+            .limit(limit)
+            .skip((pageNo - 1) * limit)
 
         if (!chats) {
             throw new ApiError(404, "No chats found")

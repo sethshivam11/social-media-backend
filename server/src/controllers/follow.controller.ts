@@ -4,6 +4,11 @@ import { ApiResponse } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/AsyncHandler";
 import { Request, Response } from "express";
 
+
+// limit number of followers for pagination
+const limit = 20;
+let pageNo = 1;
+
 const follow = asyncHandler(
     async (req: Request, res: Response) => {
         if (!req.user) {
@@ -89,13 +94,26 @@ const getFollowers = asyncHandler(
             throw new ApiError(400, "User not verified")
         }
         const { _id } = req.user
+        const { page } = req.query
 
-        const follow: FollowInterface | null = await Follow.findOne({ user: _id }).populate({
-            path: "followers",
-            select: "fullName username avatar",
-            model: "user",
-            strictPopulate: false
-        })
+        if (page) {
+            pageNo = parseInt(page as string)
+            if (pageNo <= 0) {
+                pageNo = 1
+            }
+        }
+
+        const follow: FollowInterface | null = await Follow.findOne({ user: _id })
+            .populate({
+                path: "followers",
+                select: "fullName username avatar",
+                model: "user",
+                strictPopulate: false
+            })
+            .limit(limit)
+            .skip((pageNo - 1) * limit)
+
+
         if (!follow) {
             throw new ApiError(404, "Followers not found")
         }
@@ -111,6 +129,14 @@ const getFollowing = asyncHandler(
             throw new ApiError(400, "User not verified")
         }
         const { _id } = req.user
+        const { page } = req.query
+
+        if (page) {
+            pageNo = parseInt(page as string)
+            if (pageNo <= 0) {
+                pageNo = 1
+            }
+        }
 
         const follow: FollowInterface | null = await Follow.findOne({ user: _id }).populate({
             path: "followings",
@@ -118,6 +144,8 @@ const getFollowing = asyncHandler(
             model: "user",
             strictPopulate: false
         })
+            .limit(limit)
+            .skip((pageNo - 1) * limit)
 
         if (!follow) {
             throw new ApiError(404, "Followings not found")
