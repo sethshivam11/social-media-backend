@@ -20,7 +20,7 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
 
     const mediaFilePath = (req.file as File)?.path
 
-    if (!mediaFilePath) {
+    if (!(mediaFilePath || caption)) {
         throw new ApiError(404, "Post image is required")
     }
 
@@ -30,11 +30,12 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
         throw new ApiError(400, "Something went wrong, while uploading post media")
     }
 
+
     const post = await Post.create({
         user: _id,
         caption,
         tags,
-        media: media.secure_url
+        media
     })
     await post.updatePostCount()
 
@@ -165,15 +166,39 @@ const createFeed = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, blocked } = req.user
+        const { page } = req.query
 
-        const postWithFollowing = await Post.aggregate([
+        if (page) {
+            pageNo = parseInt(page as string)
+            if (pageNo <= 0) {
+                pageNo = 1
+            }
+        }
+
+        //  Get users that the logged in user is following
+        const follow = await Post.aggregate([
             {
                 $lookup: {
                     from: "follows",
                     localField: "user",
                     foreignField: "user",
                     as: "follow"
+                }
+            },
+            {
+                $match: {
+                    $expr: {
+                        $eq: ["$user", _id]
+                    }
+                }
+            },
+            {
+                $unwind: "$follow"
+            },
+            {
+                $project: {
+                    follow: 1,
                 }
             },
             {
@@ -181,28 +206,29 @@ const createFeed = asyncHandler(
             },
         ])
 
-        const posts = await Post.aggregate([
-            {
-                $lookup: {
-                    from: "follows",
-                    localField: "user",
-                    foreignField: "user",
-                    as: "follow"
-                }
-            },
-            {
-                $limit: limit,
-            },
-            {
-                $skip: pageNo === 1 ? 1 : (pageNo - 1) * limit
-            }
-        ])
+        if (follow.length === 0 || follow[0].follow.followings.length === 0) {
+            throw new ApiError(404, "No posts found")
+        }
+
+        // Get posts of the users that the logged in user is following
+        const posts = await Post.find({
+            user: { $in: follow[0]?.follow?.followings, $nin: blocked },
+        })
+            .populate({
+                model: "user",
+                path: "user",
+                select: "username avatar fullName",
+                strictPopulate: false
+            })
+            .limit(limit)
+            .skip((pageNo - 1) * limit)
+
         if (!posts || posts.length === 0) {
             throw new ApiError(404, "No posts found")
         }
 
         return res.status(200).json(
-            new ApiResponse(200, [postWithFollowing, ...posts], "Posts retrieved successfully")
+            new ApiResponse(200, posts, "Posts retrieved successfully")
         )
     })
 
@@ -256,7 +282,7 @@ const dislikePost = asyncHandler(
         }
 
         return res.status(200).json(
-            new ApiResponse(200, post, "Post liked successfully")
+            new ApiResponse(200, post, "Post disliked successfully")
         )
     })
 
@@ -269,7 +295,7 @@ const addToTags = asyncHandler(
 
         const { postId, tags } = req.body
         if (!postId || !tags) {
-            throw new ApiError(400, "Post id and tagged user is required")
+            throw new ApiError(400, "Post id and tagged users is required")
         }
 
         if (!(tags instanceof Array)) {
@@ -327,7 +353,7 @@ const removeFromTags = asyncHandler(
         await post.updateOne({ $pull: { tags: { $in: tags } } }, { new: true })
 
         return res.status(200).json(
-            new ApiResponse(200, post, "Users removed from post tags")
+            new ApiResponse(200, {}, "Users removed from tags")
         )
     })
 

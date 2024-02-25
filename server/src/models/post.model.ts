@@ -64,7 +64,7 @@ postSchema.methods.likePost = async function (liker: String) {
         post: this._id
     })
 
-    this.reactsCount += 1
+    this.likesCount += 1
     await this.save()
 
     return this

@@ -23,8 +23,8 @@ router.route("/dislike/:postId").get(dislikePost);
 
 router.route("/delete/:postId").delete(deletePost);
 
-router.route("/tag").put(addToTags);
+router.route("/addTags").put(addToTags);
 
-router.route("/removeTag").put(removeFromTags);
+router.route("/removeTags").put(removeFromTags);
 
 export default router;
