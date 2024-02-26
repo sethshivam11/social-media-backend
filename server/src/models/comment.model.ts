@@ -7,9 +7,7 @@ interface CommentInterface extends Document {
     content: String,
     likes: String[],
     likesCount: Number,
-    like(liker: String): String | Promise<CommentInterface>,
-    dislike(disliker: String): String | Promise<CommentInterface>,
-    updateCommentsCount(postId: string): Promise<void>
+    updateCommentsCount(postId: string, count: number): Promise<void>
 }
 
 const commentSchema = new Schema({
@@ -38,32 +36,10 @@ const commentSchema = new Schema({
 })
 
 
-commentSchema.methods.updateCommentsCount = async function (postId: string) {
+commentSchema.methods.updateCommentsCount = async function (postId: string, count: number) {
     await Post.findByIdAndUpdate(postId, {
-        $inc: { commentsCount: 1 }
+        $inc: { commentsCount: count }
     }, { new: true })
-    return this
-}
-
-commentSchema.methods.like = async function (liker: String) {
-    if (this.likes.includes(liker)) {
-        return "You have already liked this comment"
-    }
-
-    this.likesCount += 1
-    this.likes = [...this.likes, liker]
-    await this.save()
-
-    return this
-}
-
-commentSchema.methods.dislike = async function (disliker: String) {
-    if (!this.likes.includes(disliker) || this.likesCount === 0) {
-        return "You have already disliked this comment"
-    }
-
-    await this.updateOne({ $pull: { likes: disliker }, $inc: { likesCount: -1 } }, { new: true })
-
     return this
 }
 

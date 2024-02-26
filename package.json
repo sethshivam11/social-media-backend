@@ -17,7 +17,12 @@
     "expressjs",
     "nodejs",
     "vite",
-    "mongodb"
+    "mongodb",
+    "socket.io",
+    "cloudinary",
+    "jwt",
+    "bcrypt",
+    "multer"
   ],
   "author": "shivam",
   "license": "ISC",

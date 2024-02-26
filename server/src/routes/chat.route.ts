@@ -11,7 +11,9 @@ router.route("/new").post(createOneToOneChat)
 
 router.route("/get").get(getChats)
 
-router.route("/newGroup").post(createGroupChat)
+router.route("/newGroup").post(
+    upload.single("groupImage"),
+    createGroupChat)
 
 router.route("/addParticipants").patch(addParticipants)
 
@@ -21,9 +23,9 @@ router.route("/updateGroup").put(
     upload.single("groupImage"),
     updateGroupDetails)
 
-router.route("/removeGroupIcon/:chatId").patch(removeGroupIcon)
+router.route("/removeGroupImage/:chatId").patch(removeGroupIcon)
 
-router.route("/leaveGroup/:chatId").patch(leaveGroup)
+router.route("/leaveGroup/:chatId").get(leaveGroup)
 
 router.route("/deleteGroup/:chatId").delete(deleteGroup)
 

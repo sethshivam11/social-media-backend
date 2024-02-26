@@ -42,23 +42,24 @@ const createComment = asyncHandler(
             throw new ApiError(401, "User not verified")
         }
         const { _id } = req.user
-        const { postId, content } = req.body
-        if (!postId || !content) {
-            throw new ApiError(400, "Post id is required")
+        const { postId, comment } = req.body
+        if (!postId || !comment) {
+            throw new ApiError(400, "Post id and comment are required")
         }
 
-        const comment = await Comment.create({
+        const newComment = await Comment.create({
             post: postId,
             user: _id,
-            content
+            content: comment
         })
-        if (!comment) {
+        if (!newComment) {
             throw new ApiError(400, "Something went wrong, while creating comment")
         }
-        await comment.updateCommentsCount(postId)
+
+        await newComment.updateCommentsCount(postId, 1)
 
         return res.status(200).json(
-            new ApiResponse(200, comment, "Comment created successfully")
+            new ApiResponse(200, newComment, "Comment created successfully")
         )
     })
 
@@ -84,6 +85,7 @@ const deleteComment = asyncHandler(
         }
 
         await comment.deleteOne()
+        await comment.updateCommentsCount(comment.post as string, -1)
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Comment deleted successfully")
@@ -107,13 +109,12 @@ const likeComment = asyncHandler(
             throw new ApiError(404, "Comment not found")
         }
 
-        const like = await comment.like(_id)
-        if (typeof like === "string") {
-            throw new ApiError(400, like)
-        }
+        await comment.updateOne({ $push: { likes: _id }, $inc: { likesCount: 1 } }, { new: true })
+        comment.likes = [...comment.likes, _id]
+        comment.likesCount = comment.likesCount as number + 1
 
         return res.status(200).json(
-            new ApiResponse(200, like, "Comment liked successfully")
+        new ApiResponse(200, comment, "Comment liked successfully")
         )
     })
 
@@ -134,13 +135,12 @@ const dislikeComment = asyncHandler(
             throw new ApiError(404, "Comment not found")
         }
 
-        const dislike = await comment.dislike(_id)
-        if (typeof dislike === "string") {
-            throw new ApiError(400, dislike)
-        }
-
+        await comment.updateOne({ $pull: { likes: _id }, $inc: { likesCount: -1 } }, { new: true })
+        comment.likes = comment.likes.filter((id) => id.toString() !== _id.toString())
+        comment.likesCount = comment.likesCount as number - 1
+        
         return res.status(200).json(
-            new ApiResponse(200, dislike, "Comment disliked successfully")
+            new ApiResponse(200, comment, "Comment disliked successfully")
         )
     })
 

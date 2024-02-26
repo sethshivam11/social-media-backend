@@ -24,7 +24,7 @@ const createOneToOneChat = asyncHandler(
             throw new ApiError(400, "receiverId is required")
         }
 
-        const chatExists = await Chat.findOne({ users: { $all: [_id, receiverId] } })
+        const chatExists = await Chat.findOne({ users: { $in: [_id, receiverId] }, isGroupChat: false })
         if (chatExists) {
             throw new ApiError(400, "Chat already exists")
         }
@@ -49,9 +49,23 @@ const createGroupChat = asyncHandler(
         }
         const { _id } = req.user
 
-        const { participants, groupName, groupIcon, admin } = req.body
-        if (!participants.length || !groupName) {
+        const { participants, groupName, admin } = req.body
+        if (!participants || !groupName) {
             throw new ApiError(400, "participants and groupName are required")
+        }
+
+        if (!(participants instanceof Array)) {
+            throw new ApiError(400, "Participants must be an array")
+        }
+
+        let groupIcon = DEFAULT_GROUP_ICON
+        const groupIconLocalPath = (req.file as File)?.path
+        if(groupIconLocalPath) {
+            const groupIconData = await uploadToCloudinary(groupIconLocalPath)
+            if (!groupIconData) {
+                throw new ApiError(500, "Something went wrong while uploading group icon")
+            }
+            groupIcon = groupIconData.secure_url
         }
 
 
@@ -184,7 +198,7 @@ const updateGroupDetails = asyncHandler(
         const groupIconLocalPath = (req.file as File)?.path
 
         if (!chatId || !(groupIconLocalPath || groupName)) {
-            throw new ApiError(400, "chatId and groupIcon are required")
+            throw new ApiError(400, "chatId or groupImage is required")
         }
 
         const chat = await Chat.findById(chatId)
@@ -282,6 +296,10 @@ const removeGroupIcon = asyncHandler(
         const chat = await Chat.findById(chatId)
         if (!chat) {
             throw new ApiError(404, "Chat not found")
+        }
+
+        if(!chat.isGroupChat){
+            throw new ApiError(400, "This is not a group chat")
         }
 
         if (!chat.admin.includes(_id)) {

@@ -61,10 +61,6 @@ const reactMessage = asyncHandler(
             throw new ApiError(400, "MessageId is required")
         }
 
-        if (typeof messageId !== "string") {
-            throw new ApiError(400, "Content and messageId must be a string")
-        }
-
         const message = await Message.findById(messageId)
         if (!message) {
             throw new ApiError(404, "Message not found")
@@ -78,9 +74,9 @@ const reactMessage = asyncHandler(
 
         const reacts = {
             content: content || "❤️",
-            user: _id
+            user: _id.toString()
         }
-        message.reacts = [reacts, ...message.reacts]
+        message.reacts = [reacts, ...message.reacts || []]
 
         await message.save()
 
@@ -96,7 +92,7 @@ const unreactMessage = asyncHandler(
         }
         const { _id } = req.user
 
-        const { messageId } = req.body
+        const { messageId } = req.params
         if (!messageId) {
             throw new ApiError(400, "Message is required")
         }

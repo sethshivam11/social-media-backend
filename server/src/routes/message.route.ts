@@ -15,7 +15,7 @@ router.route("/send").post(
 
 router.route("/react").patch(reactMessage)
 
-router.route("/unreact").patch(unreactMessage)
+router.route("/unreact/:messageId").patch(unreactMessage)
 
 router.route("/getReactions/:messageId").get(getReactions)
 
