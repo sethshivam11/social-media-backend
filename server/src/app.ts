@@ -5,7 +5,7 @@ import errorHandler from "./middlewares/error.middleware"
 import { UserInterface } from "./models/user.model"
 import { createServer } from "http"
 import { Server } from "socket.io"
-import initializeSocket from "./socket"
+import {initializeSocket} from "./socket"
 
 
 declare module "express" {
@@ -14,11 +14,21 @@ declare module "express" {
     }
 }
 
+declare module "socket.io" {
+    interface Socket {
+        user?: UserInterface
+    }
+}
 
 const app = express()
 const httpServer = createServer(app)
 
-const io = new Server(httpServer)
+const io = new Server(httpServer, {
+    cors: {
+        origin: process.env.CORS_ORIGIN
+    },
+    cookie: true
+})
 
 app.set("io", io)
 
@@ -35,6 +45,7 @@ import postRouter from "./routes/post.route"
 import commmentRouter from "./routes/comment.route"
 import chatRouter from "./routes/chat.route"
 import messageRouter from "./routes/message.route"
+import { IOType } from "child_process"
 
 
 // Routes declarations

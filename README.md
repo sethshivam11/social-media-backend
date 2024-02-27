@@ -54,6 +54,8 @@ To run this project, you will need to add the following environment variables to
 
 `NODE_ENV`
 
+`CORS_ORIGIN`
+
 # API Documentation
 
 [Click](/server) to see docs or go to server folder
