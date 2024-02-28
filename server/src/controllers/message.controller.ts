@@ -5,6 +5,8 @@ import { Message } from "../models/message.model";
 import { File } from "./user.controller";
 import { uploadToCloudinary } from "../utils/cloudinary";
 import { ApiResponse } from "../utils/ApiResponse";
+import { emitSocketEvent } from "../socket";
+import { ChatEventEnum } from "../constants";
 
 // limit number of messages for pagination
 const limit = 40;
@@ -44,6 +46,8 @@ const sendMessage = asyncHandler(
             throw new ApiError(500, "Message not sent")
         }
 
+        emitSocketEvent(_id, ChatEventEnum.MESSAGE_RECIEVED_EVENT, msg)
+
         return res.status(201).json(
             new ApiResponse(201, msg, "Message sent")
         )
@@ -54,7 +58,7 @@ const reactMessage = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, fullName, avatar, username } = req.user
 
         const { messageId, content } = req.body
         if (!messageId) {
@@ -79,6 +83,8 @@ const reactMessage = asyncHandler(
         message.reacts = [reacts, ...message.reacts || []]
 
         await message.save()
+        emitSocketEvent(_id, ChatEventEnum.NEW_REACT_EVENT, { fullName, content, username, avatar })
+
 
         return res.status(200).json(
             new ApiResponse(200, message, "Message reacted")
@@ -90,7 +96,7 @@ const unreactMessage = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, fullName, avatar, username } = req.user
 
         const { messageId } = req.params
         if (!messageId) {
@@ -108,6 +114,7 @@ const unreactMessage = asyncHandler(
         }
 
         await message.updateOne({ $pull: { reacts: { user: _id } } }, { new: true })
+        emitSocketEvent(_id, ChatEventEnum.NEW_REACT_EVENT, { fullName, username, avatar })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Message unreacted")
@@ -180,7 +187,7 @@ const editMessageContent = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, fullName, username, avatar } = req.user
 
         const { messageId, content } = req.body
         if (!messageId || !content) {
@@ -198,6 +205,7 @@ const editMessageContent = asyncHandler(
 
         message.content = content
         await message.save()
+        emitSocketEvent(_id, ChatEventEnum.NEW_EDIT_EVENT, { fullName, content, username, avatar })
 
         return res.status(200).json(
             new ApiResponse(200, message, "Message edited")

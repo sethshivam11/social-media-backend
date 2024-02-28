@@ -1,11 +1,13 @@
 import mongoose, { Schema, Document } from "mongoose"
+import { User, UserInterface } from "./user.model"
 
 interface ChatInterface extends Document {
     users: String[],
     isGroupChat: Boolean,
     admin: String[],
     groupName: String,
-    groupIcon: String
+    groupIcon: String,
+    getParticipantsInfo(participants: string[]): UserInterface
 }
 
 const chatSchema = new Schema({
@@ -43,5 +45,9 @@ chatSchema.pre("save", function (next) {
     }
     next();
 })
+
+chatSchema.methods.getParticipantsInfo = (participants: string[]) => {
+    return User.findById({ $in: participants }).select("fullName username avatar")
+}
 
 export const Chat = mongoose.model<ChatInterface>("chat", chatSchema)

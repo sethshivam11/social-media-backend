@@ -3,6 +3,7 @@ import { ChatEventEnum } from "../constants";
 import jwt from "jsonwebtoken"
 import { ApiError } from "../utils/ApiError";
 import { User } from "../models/user.model";
+import { io } from "../app";
 
 const chatJoinEvent = (socket: Socket) => {
     socket.on(ChatEventEnum.NEW_CHAT_EVENT, (chatId) => {
@@ -91,11 +92,11 @@ const initializeSocket = (io: Server) => {
     });
 }
 
-// const emitSocketEvent = (req: Request, roomId: string, event: string, payload: any) => {
-//     req.app.get("io").in(roomId).emit(event, payload);
-// };
+const emitSocketEvent = (roomId: string, event: string, payload: any) => {
+    io.in(roomId).emit(event, payload)
+};
 
 export {
     initializeSocket,
-    // emitSocketEvent
+    emitSocketEvent
 }
