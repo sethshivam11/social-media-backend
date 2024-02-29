@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError";
 import { asyncHandler } from "../utils/AsyncHandler";
 import { Message } from "../models/message.model";
 import { File } from "./user.controller";
-import { uploadToCloudinary } from "../utils/cloudinary";
+import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import { ApiResponse } from "../utils/ApiResponse";
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
@@ -142,6 +142,10 @@ const deleteMessage = asyncHandler(
             throw new ApiError(403, "You can't delete this message")
         }
 
+        if(message.attachments.length > 0){
+            const deleteAttachments = message.attachments
+            await Promise.all(deleteAttachments.map(async (link: string) => deleteFromCloudinary(link)))
+        }
         await message.deleteOne()
 
         return res.status(200).json(

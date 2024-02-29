@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/AsyncHandler";
 import { File } from "./user.controller";
-import { deleteFromCloudinary, recordFileLink, uploadToCloudinary } from "../utils/cloudinary";
+import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import { ChatEventEnum, DEFAULT_GROUP_ICON } from "../constants";
 import { emitSocketEvent } from "../socket";
 
@@ -224,10 +224,7 @@ const updateGroupDetails = asyncHandler(
                 throw new ApiError(500, "Something went wrong while uploading group icon")
             }
 
-            const deletePreviousIcon = await deleteFromCloudinary(chat.groupIcon as string)
-            if (!deletePreviousIcon) {
-                recordFileLink(chat.groupIcon as string)
-            }
+            await deleteFromCloudinary(chat.groupIcon as string)
 
             chat.groupIcon = groupIcon.secure_url
         }
@@ -263,6 +260,7 @@ const deleteGroup = asyncHandler(
             throw new ApiError(403, "You are not authorized to delete group")
         }
 
+        if(chat.groupIcon !== DEFAULT_GROUP_ICON) await deleteFromCloudinary(chat.groupIcon as string)
         await chat.deleteOne()
 
         emitSocketEvent(chat._id, ChatEventEnum.GROUP_DETAILS_UPDATED, chat)
@@ -324,10 +322,7 @@ const removeGroupIcon = asyncHandler(
             throw new ApiError(400, "Group icon is already removed")
         }
 
-        const deletePreviousIcon = await deleteFromCloudinary(chat.groupIcon as string)
-        if (!deletePreviousIcon) {
-            recordFileLink(chat.groupIcon as string)
-        }
+        await deleteFromCloudinary(chat.groupIcon as string)
 
         chat.groupIcon = DEFAULT_GROUP_ICON
         await chat.save()

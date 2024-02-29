@@ -21,14 +21,8 @@ const typingEvent = (socket: Socket) => {
 
 const stopTypingEvent = (socket: Socket) => {
     socket.on(ChatEventEnum.STOP_TYPING_EVENT, (chatId) => {
+        console.log(`chatId: ${chatId} stopped typing`)
         socket.in(chatId).emit(ChatEventEnum.STOP_TYPING_EVENT, chatId)
-    })
-}
-
-const groupNameUpdated = (socket: Socket) => {
-    socket.on(ChatEventEnum.GROUP_NAME_UPDATE_EVENT, (chatId) => {
-        console.log(`Group name updated by ${chatId}`)
-        socket.in(chatId).emit(ChatEventEnum.GROUP_NAME_UPDATE_EVENT, chatId)
     })
 }
 
@@ -44,50 +38,41 @@ const initializeSocket = (io: Server) => {
 
     return io.on("connection", async (socket: Socket) => {
         try {
-            let accessToken = ""
-            let refreshToken = "";
-            io.engine.on("headers", async (headers, request) => {
-                if (!request.headers.cookie) return;
-                const cookies = request.headers.cookie.split("; ")
-                accessToken = cookies[0].replace("accessToken=", "")
-                refreshToken = cookies[1].replace("refreshToken=", "")
-                const decodedToken = await jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET as string) as jwt.JwtPayload
+            const accessToken = socket.handshake.headers.authorization?.replace("Bearer ", "")
+            if (!accessToken) {
+                throw new ApiError(401, "Unauthorized handshake, token not found")
+            }
 
-                const user = await User.findById(decodedToken._id)
+            const decodedToken = await jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET as string) as jwt.JwtPayload
 
-                if (!user) {
-                    throw new ApiError(401, "Unauthorized handshake, user not found")
-                }
+            const user = await User.findById(decodedToken._id)
 
-                socket.user = user
-                socket.join(user?._id.toString())
-                socket.emit(ChatEventEnum.CONNECTED_EVENT)
-                console.log("User connected 🚀, userId: ", user._id.toString())
-            });
+            if (!user) {
+                throw new ApiError(401, "Unauthorized handshake, user not found")
+            }
+
+            socket.user = user
+            socket.join(user?._id.toString())
+            socket.emit(ChatEventEnum.CONNECTED_EVENT)
+            console.log("User connected 🚀, userId:", user._id.toString())
 
 
             chatJoinEvent(socket)
             typingEvent(socket)
-            groupNameUpdated(socket)
             stopTypingEvent(socket)
             newGroupChatEvent(socket)
 
             socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
-                console.log("User disconnected 🚫, userId: ", socket.user?._id);
+                console.log("User disconnected 🚫, userId:", socket.user?._id.toString());
                 if (socket.user?._id) {
-                    socket.leave(socket.user._id);
+                    socket.leave(socket.user._id.toString());
                 }
             });
         } catch (err) {
-            if (err instanceof jwt.TokenExpiredError) {
-                throw new ApiError(401, "Unauthorized handshake, token expired")
-            }
-            else if (err instanceof jwt.JsonWebTokenError) {
-                throw new ApiError(401, "Unauthorized handshake, invalid token")
-            }
-            else {
-                throw new ApiError(500, "Internal server error")
-            }
+            socket.emit(
+                ChatEventEnum.SOCKET_ERROR_EVENT,
+                (err as ApiError)?.message || "Something went wrong while connecting to the socket"
+            );
         }
     });
 }

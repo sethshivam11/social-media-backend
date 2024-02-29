@@ -1,7 +1,7 @@
 export const ChatEventEnum = Object.freeze(
     {
         CONNECTED_EVENT: "connected",
-        DISCONNECT_EVENT: "disconnected",
+        DISCONNECT_EVENT: "disconnect",
         TYPING_EVENT: "typing",
         STOP_TYPING_EVENT: "stopTyping",
         NEW_GROUP_CHAT_EVENT: "newGroup",

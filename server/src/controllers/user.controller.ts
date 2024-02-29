@@ -3,7 +3,7 @@ import { ApiResponse } from "../utils/ApiResponse"
 import { User, UserInterface } from "../models/user.model"
 import { Request, Response } from "express"
 import { asyncHandler } from "../utils/AsyncHandler"
-import { deleteFromCloudinary, uploadToCloudinary, recordFileLink } from "../utils/cloudinary"
+import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary"
 import jwt from "jsonwebtoken"
 import { DEFAULT_USER_AVATAR } from "../constants"
 
@@ -258,10 +258,7 @@ const updateAvatar = asyncHandler(
         }
 
         // Delete file from cloudinary / record if not deleted
-        const deletePrevAvatar = await deleteFromCloudinary(req.user.avatar as string)
-        if (!deletePrevAvatar) {
-            recordFileLink(req.user.avatar as string)
-        }
+        await deleteFromCloudinary(req.user.avatar as string)
 
         const user = await User.findByIdAndUpdate(_id, { $set: { avatar: avatar.secure_url } }, { new: true })
         if (!user) {
@@ -288,10 +285,7 @@ const removeAvatar = asyncHandler(
             throw new ApiError(404, "User not found")
         }
 
-        const deletePrevAvatar = await deleteFromCloudinary(user.avatar as string)
-        if (!deletePrevAvatar) {
-            recordFileLink(user.avatar as string)
-        }
+        await deleteFromCloudinary(user.avatar as string)
 
         user.avatar = DEFAULT_USER_AVATAR
         await user.save({ validateBeforeSave: false })

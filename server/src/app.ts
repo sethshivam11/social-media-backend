@@ -32,8 +32,8 @@ export const io = new Server(httpServer, {
 
 
 
-app.use(express.json({ limit: "50kb" }))
-app.use(express.urlencoded({ extended: true, limit: "50kb" }))
+app.use(express.json({ limit: "5mb" }))
+app.use(express.urlencoded({ extended: true, limit: "5mb" }))
 app.use(express.static("public"))
 app.use(cookieParser())
 
@@ -44,7 +44,7 @@ import postRouter from "./routes/post.route"
 import commmentRouter from "./routes/comment.route"
 import chatRouter from "./routes/chat.route"
 import messageRouter from "./routes/message.route"
-
+import storyRouter from "./routes/story.route"
 
 // Routes declarations
 app.use("/api/v1/users", userRouter)
@@ -53,6 +53,7 @@ app.use("/api/v1/posts", postRouter)
 app.use("/api/v1/comments", commmentRouter)
 app.use("/api/v1/chats", chatRouter)
 app.use("/api/v1/messages", messageRouter)
+app.use("/api/v1/stories", storyRouter)
 
 
 // Deployment

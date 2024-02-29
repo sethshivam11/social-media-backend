@@ -1,6 +1,6 @@
 # Sociial
 
-This is a complex social media application where users can post images, can have chats, group chats, react on chats, like/dislike posts comment on posts, follow/unfollow each other and much more. It is built using Node, Express, MongoDB, Socket.io, JWT, Bcrypt, 
+This is a complex social media application where users can post images, can have chats, group chats, react on chats, like/dislike posts comment on posts, follow/unfollow each other and much more. It is built using Node, Express, MongoDB, Socket.io, JWT, Bcrypt.
 
 
 ### Run Locally

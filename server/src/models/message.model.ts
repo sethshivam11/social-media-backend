@@ -6,6 +6,7 @@ interface MessageInterface extends Document {
     content: String,
     viewOnce: Boolean,
     reacts: { content: string, user: string }[],
+    attachments: string[]
 }
 
 const messageSchema = new Schema({

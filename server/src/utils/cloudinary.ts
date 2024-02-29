@@ -8,13 +8,13 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
-const uploadToCloudinary = async (localFilePath: string) => {
+const uploadToCloudinary = async (localFilePath: string, story?: boolean) => {
     try {
         if (!localFilePath) return null
 
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "auto",
-            upload_preset: "sociial"
+            upload_preset: story ? "sociialstory": "sociial"
         })
 
         fs.unlinkSync(localFilePath)
@@ -50,11 +50,5 @@ const deleteFromCloudinary = async (cloudFileLink: string) => {
     }
 }
 
-const recordFileLink = (cloudFileLink: string) => {
-    fs.appendFile("./server/public/undeletedFiles.txt", `${cloudFileLink}\n`, function (err) {
-        if (err) console.log(err)
-    })
-}
 
-
-export { uploadToCloudinary, deleteFromCloudinary, recordFileLink }
+export { uploadToCloudinary, deleteFromCloudinary }
