@@ -37,7 +37,7 @@ const createOneToOneChat = asyncHandler(
         if (!chat) {
             throw new ApiError(400, "Something went wrong, while creating chat")
         }
-        emitSocketEvent(_id, ChatEventEnum.NEW_CHAT_EVENT, { fullName, username, avatar })
+        emitSocketEvent(chat._id, ChatEventEnum.NEW_CHAT_EVENT, { fullName, username, avatar })
 
         return res.status(200).json(
             new ApiResponse(200, chat, "Chat created successfully")

@@ -8,6 +8,7 @@ export const ChatEventEnum = Object.freeze(
         NEW_CHAT_EVENT: "newChat",
         SOCKET_ERROR_EVENT: "socketError",
         MESSAGE_RECIEVED_EVENT: "messageRecieved",
+        MESSAGE_DELETE_EVENT: "messageRecieved",
         GROUP_NAME_UPDATE_EVENT: "updateGroupName",
         GROUP_DELETE_EVENT: "deleteGroup",
         NEW_REACT_EVENT: "someoneReacted",

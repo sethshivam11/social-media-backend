@@ -46,7 +46,7 @@ const sendMessage = asyncHandler(
             throw new ApiError(500, "Message not sent")
         }
 
-        emitSocketEvent(_id, ChatEventEnum.MESSAGE_RECIEVED_EVENT, msg)
+        emitSocketEvent(chatId, ChatEventEnum.MESSAGE_RECIEVED_EVENT, msg)
 
         return res.status(201).json(
             new ApiResponse(201, msg, "Message sent")
@@ -83,7 +83,7 @@ const reactMessage = asyncHandler(
         message.reacts = [reacts, ...message.reacts || []]
 
         await message.save()
-        emitSocketEvent(_id, ChatEventEnum.NEW_REACT_EVENT, { fullName, content, username, avatar })
+        emitSocketEvent((message.chat as string), ChatEventEnum.NEW_REACT_EVENT, { fullName, content, username, avatar })
 
 
         return res.status(200).json(
@@ -114,7 +114,7 @@ const unreactMessage = asyncHandler(
         }
 
         await message.updateOne({ $pull: { reacts: { user: _id } } }, { new: true })
-        emitSocketEvent(_id, ChatEventEnum.NEW_REACT_EVENT, { fullName, username, avatar })
+        emitSocketEvent((message.chat as string), ChatEventEnum.NEW_REACT_EVENT, { fullName, username, avatar })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Message unreacted")
@@ -142,11 +142,13 @@ const deleteMessage = asyncHandler(
             throw new ApiError(403, "You can't delete this message")
         }
 
-        if(message.attachments.length > 0){
+        if (message.attachments.length > 0) {
             const deleteAttachments = message.attachments
             await Promise.all(deleteAttachments.map(async (link: string) => deleteFromCloudinary(link)))
         }
+
         await message.deleteOne()
+        emitSocketEvent((message.chat as string), ChatEventEnum.MESSAGE_DELETE_EVENT, { messageId })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Message deleted")
@@ -209,7 +211,7 @@ const editMessageContent = asyncHandler(
 
         message.content = content
         await message.save()
-        emitSocketEvent(_id, ChatEventEnum.NEW_EDIT_EVENT, { fullName, content, username, avatar })
+        emitSocketEvent((message.chat as string), ChatEventEnum.NEW_EDIT_EVENT, { fullName, content, username, avatar })
 
         return res.status(200).json(
             new ApiResponse(200, message, "Message edited")
