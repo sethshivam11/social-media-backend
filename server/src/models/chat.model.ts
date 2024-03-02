@@ -7,6 +7,7 @@ interface ChatInterface extends Document {
     admin: String[],
     groupName: String,
     groupIcon: String,
+    lastMessage: String,
     getParticipantsInfo(participants: string[]): UserInterface
 }
 
@@ -35,6 +36,10 @@ const chatSchema = new Schema({
         type: String,
         default: "https://res.cloudinary.com/dv3qbj0bn/image/upload/v1708097524/sociial/ikuname8uljxeasstnjy.png"
     },
+    lastMessage: {
+        type: String,
+        trim: true,
+    }
 }, {
     timestamps: true
 })

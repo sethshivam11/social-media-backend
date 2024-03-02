@@ -19,7 +19,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -60,7 +60,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -101,7 +101,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -127,7 +127,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -153,7 +153,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -194,7 +194,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -240,7 +240,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -281,7 +281,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -327,7 +327,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -374,7 +374,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -415,7 +415,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -462,7 +462,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -510,7 +510,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -548,7 +548,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -582,7 +582,7 @@
 
 ###     Follow a user
 
-    /v1/follow/new
+    /v1/follow/new/:followee
 
 > ***POST***
 
@@ -594,14 +594,14 @@
 - Example value
     `Authorization: Bearer YOUR_BEARER_TOKEN`
 
-**Request Body** ->
+**Request Params** ->
 
 - Required fields
     `followee` 
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -623,7 +623,7 @@
 
 ###     Unfollow a user
 
-    /v1/follow/unfollow
+    /v1/follow/unfollow/:unfollowee
 
 > ***POST***
 
@@ -635,14 +635,14 @@
 - Example value
     `Authorization: Bearer YOUR_BEARER_TOKEN`
 
-**Request Body** ->
+**Request Params** ->
 
 - Required fields
     `unfollowee` 
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -674,7 +674,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -712,7 +712,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -755,7 +755,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -801,7 +801,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -866,7 +866,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -916,7 +916,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -964,7 +964,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1005,7 +1005,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1046,7 +1046,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1089,7 +1089,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -1121,7 +1121,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1167,7 +1167,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -1209,7 +1209,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1251,7 +1251,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1291,7 +1291,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -1304,7 +1304,7 @@
 
 ###     New one on one chat
 
-    /v1/chats/chats/new
+    /v1/chats/chats/new/:recieverId
 
 > ***POST***
 
@@ -1316,14 +1316,14 @@
 - Example value
     `Authorization: Bearer YOUR_BEARER_TOKEN`
 
-**Request Body** ->
+**Request Params** ->
 
 - Required fields
     `recieverId`
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1366,7 +1366,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -1422,7 +1422,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1467,7 +1467,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1514,7 +1514,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -1547,7 +1547,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1594,7 +1594,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1641,7 +1641,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1688,7 +1688,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1730,7 +1730,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -1760,7 +1760,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -1792,7 +1792,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 201,
   "data": {
@@ -1836,7 +1836,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {
@@ -1882,7 +1882,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {},
@@ -1915,7 +1915,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -1972,7 +1972,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": [
@@ -2007,7 +2007,7 @@
 
 ##### Example response
 ---
-```
+```JSON
 {
   "statusCode": 200,
   "data": {

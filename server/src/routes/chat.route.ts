@@ -7,7 +7,7 @@ const router = Router()
 
 router.use(verifyJWT)
 
-router.route("/new").post(createOneToOneChat)
+router.route("/new/:receiverId").post(createOneToOneChat)
 
 router.route("/get").get(getChats)
 

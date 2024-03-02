@@ -16,7 +16,7 @@ const follow = asyncHandler(
         }
         const { _id } = req.user
 
-        const { followee } = req.body
+        const { followee } = req.params
         if (!followee) {
             throw new ApiError(400, "Followee is required")
         }
@@ -63,7 +63,7 @@ const unfollow = asyncHandler(
         }
         const { _id } = req.user
 
-        const { unfollowee } = req.body
+        const { unfollowee } = req.params
         if (!unfollowee) {
             throw new ApiError(400, "Unfollowee is required")
         }

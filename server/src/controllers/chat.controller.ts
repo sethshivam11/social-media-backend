@@ -20,7 +20,7 @@ const createOneToOneChat = asyncHandler(
         }
 
         const { _id, fullName, username, avatar } = req.user
-        const { receiverId } = req.body
+        const { receiverId } = req.params
         if (!receiverId) {
             throw new ApiError(400, "receiverId is required")
         }
