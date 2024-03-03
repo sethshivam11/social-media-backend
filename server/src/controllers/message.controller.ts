@@ -7,10 +7,49 @@ import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import { ApiResponse } from "../utils/ApiResponse";
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
+import mongoose from "mongoose";
 
 // limit number of messages for pagination
 const limit = 40;
 let pageNo = 1;
+
+const fetchUsersInChat = (chatId: string) => Message.aggregate([
+    {
+        $lookup: {
+            from: "chats",
+            localField: "chat",
+            foreignField: "_id",
+            as: "chat",
+            pipeline: [
+                {
+                    $project: {
+                        users: 1,
+                    },
+                },
+            ],
+        },
+    },
+    {
+        $match: {
+            chat: {
+                $elemMatch: {
+                    _id: new mongoose.Types.ObjectId(chatId),
+                },
+            },
+        },
+    },
+    {
+        $unwind: "$chat",
+    },
+    {
+        $project: {
+            chat: 1,
+        },
+    },
+    {
+        $limit: 1
+    }
+])
 
 const sendMessage = asyncHandler(
     async (req: Request, res: Response) => {
@@ -46,7 +85,12 @@ const sendMessage = asyncHandler(
             throw new ApiError(500, "Message not sent")
         }
 
-        emitSocketEvent(chatId, ChatEventEnum.MESSAGE_RECIEVED_EVENT, msg)
+        const chats = await fetchUsersInChat(chatId)
+        chats[0].chat.users.forEach((user: String) => {
+            if (user.toString() === _id.toString()) return;
+            emitSocketEvent(user.toString(), ChatEventEnum.MESSAGE_RECIEVED_EVENT, msg)
+        })
+
 
         return res.status(201).json(
             new ApiResponse(201, msg, "Message sent")
@@ -83,7 +127,12 @@ const reactMessage = asyncHandler(
         message.reacts = [reacts, ...message.reacts || []]
 
         await message.save()
-        emitSocketEvent((message.chat as string), ChatEventEnum.NEW_REACT_EVENT, { fullName, content, username, avatar })
+
+        const chats = await fetchUsersInChat(message.chat as string)
+        chats[0].chat.users.forEach((user: String) => {
+            if (user.toString() === _id.toString()) return;
+            emitSocketEvent(user.toString(), ChatEventEnum.NEW_REACT_EVENT, { user: { fullName, content, username, avatar }, react: reacts })
+        })
 
 
         return res.status(200).json(
@@ -108,13 +157,18 @@ const unreactMessage = asyncHandler(
             throw new ApiError(404, "Message not found")
         }
 
-        const exists = message.reacts.some((react: { content: string, user: string }) => react.user.toString() === _id.toString())
+        const exists = message.reacts.some((react: { user: string }) => react.user.toString() === _id.toString())
         if (!exists) {
             throw new ApiError(400, "You already unreacted to this message")
         }
 
-        await message.updateOne({ $pull: { reacts: { user: _id } } }, { new: true })
-        emitSocketEvent((message.chat as string), ChatEventEnum.NEW_REACT_EVENT, { fullName, username, avatar })
+        await message.updateOne({ $pull: { reacts: { user: _id.toString() } } }, { new: true })
+
+        const chats = await fetchUsersInChat(message.chat as string)
+        chats[0].chat.users.forEach((user: String) => {
+            if (user.toString() === _id.toString()) return;
+            emitSocketEvent(user.toString(), ChatEventEnum.NEW_UNREACT_EVENT, { user: { fullName, avatar, username }, unreact: true })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Message unreacted")
@@ -126,7 +180,7 @@ const deleteMessage = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, fullName, avatar, username } = req.user
 
         const { messageId } = req.params
         if (!messageId) {
@@ -148,7 +202,12 @@ const deleteMessage = asyncHandler(
         }
 
         await message.deleteOne()
-        emitSocketEvent((message.chat as string), ChatEventEnum.MESSAGE_DELETE_EVENT, { messageId })
+
+        const chats = await fetchUsersInChat(message.chat as string)
+        chats[0].chat.users.forEach((user: String) => {
+            if (user.toString() === _id.toString()) return;
+            emitSocketEvent(user.toString(), ChatEventEnum.MESSAGE_DELETE_EVENT, { user: { fullName, avatar, username }, message: messageId })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Message deleted")
@@ -211,7 +270,12 @@ const editMessageContent = asyncHandler(
 
         message.content = content
         await message.save()
-        emitSocketEvent((message.chat as string), ChatEventEnum.NEW_EDIT_EVENT, { fullName, content, username, avatar })
+
+        const chats = await fetchUsersInChat(message.chat as string)
+        chats[0].chat.users.forEach((user: String) => {
+            if (user.toString() === _id.toString()) return;
+            emitSocketEvent(user.toString(), ChatEventEnum.NEW_EDIT_EVENT, { user: { fullName, avatar, username }, message })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, message, "Message edited")

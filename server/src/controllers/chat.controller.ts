@@ -37,7 +37,7 @@ const createOneToOneChat = asyncHandler(
         if (!chat) {
             throw new ApiError(400, "Something went wrong, while creating chat")
         }
-        emitSocketEvent(chat._id, ChatEventEnum.NEW_CHAT_EVENT, { fullName, username, avatar })
+        emitSocketEvent(receiverId, ChatEventEnum.NEW_CHAT_EVENT, { fullName, username, avatar })
 
         return res.status(200).json(
             new ApiResponse(200, chat, "Chat created successfully")
@@ -82,7 +82,9 @@ const createGroupChat = asyncHandler(
         if (!groupChat) {
             throw new ApiError(400, "Something went wrong, while creating group chat")
         }
-        emitSocketEvent(groupChat._id, ChatEventEnum.NEW_CHAT_EVENT, { fullName, username, avatar })
+
+        participants.forEach((participant: string) =>
+            emitSocketEvent(participant, ChatEventEnum.NEW_CHAT_EVENT, { fullName, username, avatar }))
 
         return res.status(200).json(
             new ApiResponse(200, groupChat, "Group chat created successfully")
@@ -151,7 +153,10 @@ const addParticipants = asyncHandler(
         await chat.save()
         const participantsInfo = await chat.getParticipantsInfo(participants)
 
-        emitSocketEvent(chat._id, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, avatar, username } })
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, avatar, username } })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, chat, "Participants added successfully")
@@ -188,7 +193,10 @@ const removeParticipants = asyncHandler(
         await chat.updateOne({ $pull: { users: { $in: participants } } })
 
         const participantsInfo = await chat.getParticipantsInfo(participants)
-        emitSocketEvent(chat._id, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, username, avatar } })
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, avatar, username } })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Participants removed successfully")
@@ -200,7 +208,7 @@ const updateGroupDetails = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, username, avatar, fullName } = req.user
 
         const { chatId, groupName } = req.body
         const groupIconLocalPath = (req.file as File)?.path
@@ -232,7 +240,10 @@ const updateGroupDetails = asyncHandler(
         if (groupName) chat.groupName = groupName
         await chat.save()
 
-        emitSocketEvent(chat._id, ChatEventEnum.GROUP_DETAILS_UPDATED, chat)
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, chat, "Group icon updated successfully")
@@ -244,7 +255,7 @@ const deleteGroup = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, username, avatar, fullName } = req.user
 
         const { chatId } = req.params
         if (!chatId) {
@@ -260,10 +271,13 @@ const deleteGroup = asyncHandler(
             throw new ApiError(403, "You are not authorized to delete group")
         }
 
-        if(chat.groupIcon !== DEFAULT_GROUP_ICON) await deleteFromCloudinary(chat.groupIcon as string)
+        if (chat.groupIcon !== DEFAULT_GROUP_ICON) await deleteFromCloudinary(chat.groupIcon as string)
         await chat.deleteOne()
 
-        emitSocketEvent(chat._id, ChatEventEnum.GROUP_DETAILS_UPDATED, chat)
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Group deleted successfully")
@@ -275,18 +289,25 @@ const leaveGroup = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, fullName, avatar, username } = req.user
 
         const { chatId } = req.params
         if (!chatId) {
             throw new ApiError(400, "chatId is required")
         }
 
-        await Chat.findByIdAndUpdate(chatId,
-            { $pull: { users: _id, admin: _id } },
-            { new: true })
+        const chat = await Chat.findById(chatId)
 
-        emitSocketEvent(chatId, ChatEventEnum.GROUP_LEAVE_EVENT, { chatId })
+        if (!chat) {
+            throw new ApiError(404, "Chat not found")
+        }
+
+        await chat.updateOne({ $pull: { users: _id, admin: _id } })
+
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.GROUP_LEAVE_EVENT, { chat, user: { fullName, avatar, username } })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Group left successfully")
@@ -298,7 +319,7 @@ const removeGroupIcon = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, fullName, avatar, username } = req.user
 
         const { chatId } = req.params
         if (!chatId) {
@@ -327,7 +348,11 @@ const removeGroupIcon = asyncHandler(
         chat.groupIcon = DEFAULT_GROUP_ICON
         await chat.save()
 
-        emitSocketEvent(chat._id, ChatEventEnum.GROUP_DETAILS_UPDATED, chat)
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
+        })
+
 
         return res.status(200).json(
             new ApiResponse(200, chat, "Group icon removed successfully")
@@ -339,7 +364,7 @@ const makeAdmin = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, username, fullName, avatar } = req.user
 
         const { chatId, userId } = req.body
         if (!chatId || !userId) {
@@ -367,7 +392,10 @@ const makeAdmin = asyncHandler(
         await chat.save()
         const getUsersInParticipants = await chat.getParticipantsInfo([userId])
 
-        emitSocketEvent(chat._id, ChatEventEnum.NEW_ADMIN_EVENT, getUsersInParticipants)
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.NEW_ADMIN_EVENT, { admin: getUsersInParticipants, user: { fullName, avatar, username } })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, chat, "Admin added successfully")
@@ -379,7 +407,7 @@ const removeAdmin = asyncHandler(
         if (!req.user) {
             throw new ApiError(401, "User not verified")
         }
-        const { _id } = req.user
+        const { _id, fullName, username, avatar } = req.user
 
         const { chatId, userId } = req.body
         if (!chatId || !userId) {
@@ -406,7 +434,10 @@ const removeAdmin = asyncHandler(
         await chat.updateOne({ $pull: { admin: userId } }, { new: true })
 
         const getUsersInParticipants = await chat.getParticipantsInfo([userId])
-        emitSocketEvent(chat._id, ChatEventEnum.NEW_ADMIN_EVENT, getUsersInParticipants)
+        chat.users.forEach((participant: String) => {
+            if (participant.toString() === _id.toString()) return;
+            emitSocketEvent(participant as string, ChatEventEnum.NEW_ADMIN_EVENT, { removed: getUsersInParticipants, user: { fullName, avatar, username } })
+        })
 
         return res.status(200).json(
             new ApiResponse(200, chat, "Admin added successfully")
