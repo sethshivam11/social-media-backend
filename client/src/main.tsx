@@ -1,16 +1,28 @@
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-import UserProvider from './context/UserProvider.tsx'
-import PostProvider from './context/PostProvider.tsx'
-import StoryProvider from './context/StoryProvider.tsx'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { NextUIProvider } from "@nextui-org/react";
+import App from "./App.tsx";
+import "./index.css";
+import ChatProvider from "./context/ChatProvider.tsx";
+import PostProvider from "./context/PostProvider.tsx";
+import UserProvider from "./context/UserProvider.tsx";
+import SocketProvider from "./context/SocketProvider.tsx";
+import { BrowserRouter } from "react-router-dom";
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <UserProvider>
-    <PostProvider>
-      <StoryProvider>
-        <App />
-      </StoryProvider>
-    </PostProvider>
-  </UserProvider>
-)
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <NextUIProvider>
+      <UserProvider>
+        <PostProvider>
+          <ChatProvider>
+            <SocketProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </SocketProvider>
+          </ChatProvider>
+        </PostProvider>
+      </UserProvider>
+    </NextUIProvider>
+  </React.StrictMode>
+);
