@@ -45,6 +45,8 @@ interface UserContext {
   renewAccessToken: Function;
   isUsernameAvailable: Function;
 
+  isLoggedIn: boolean;
+  setIsLoggedIn: Function;
   follow: Function;
   unfollow: Function;
   getFollowers: Function;
@@ -69,6 +71,8 @@ const initialState = {
     isMailVerified: false,
     refreshToken: "",
   },
+  isLoggedIn: false,
+  setIsLoggedIn: () => {},
   fetchUser: () => {},
   registerUser: (creds: {
     fullName: string;
@@ -153,6 +157,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     refreshToken: "",
   });
   const [page, setPage] = React.useState(1);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
   function fetchUser() {
     fetch("/api/v1/users/get")
@@ -165,7 +170,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -198,7 +203,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -226,7 +231,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -255,7 +260,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -270,7 +275,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -291,7 +296,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -314,7 +319,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -329,7 +334,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -352,7 +357,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -367,7 +372,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -382,7 +387,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -397,7 +402,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -418,11 +423,14 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
   function isUsernameAvailable(username: string) {
+    if (!username?.trim()) {
+      return;
+    }
     fetch(`/api/v1/users/usernameAvailable/${username}`)
       .then((parsed) => parsed.json())
       .then((response) => {
@@ -433,7 +441,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return err.message || "Something went wrong";
       });
   }
 
@@ -450,7 +458,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -467,7 +475,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -482,7 +490,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -497,7 +505,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong, while fetching data";
+        return "Something went wrong";
       });
   }
 
@@ -506,6 +514,8 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       value={{
         fetchUser,
         user,
+        isLoggedIn,
+        setIsLoggedIn,
         registerUser,
         loginUser,
         logoutUser,

@@ -58,4 +58,4 @@ To run this project, you will need to add the following environment variables to
 
 # API Documentation
 
-[Click](/server) to see docs or go to server folder
+[Click](/server/README.md) to see docs or go to server folder

@@ -3,7 +3,7 @@ import { ChatEventEnum } from "../constants";
 import jwt from "jsonwebtoken"
 import { ApiError } from "../utils/ApiError";
 import { User } from "../models/user.model";
-import { io } from "../app";
+import { io } from "../../app";
 
 const chatJoinEvent = (socket: Socket) => {
     socket.on(ChatEventEnum.NEW_CHAT_EVENT, (chatId) => {

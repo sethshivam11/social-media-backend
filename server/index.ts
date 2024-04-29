@@ -1,4 +1,4 @@
-import connectDB from "./db"
+import connectDB from "./src/db"
 import httpServer from "./app"
 
 

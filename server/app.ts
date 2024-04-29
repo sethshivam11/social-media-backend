@@ -1,11 +1,11 @@
 import express, { Request, Response } from "express"
 import path from "path"
 import cookieParser from "cookie-parser"
-import errorHandler from "./middlewares/error.middleware"
-import { UserInterface } from "./models/user.model"
+import errorHandler from "./src/middlewares/error.middleware"
+import { UserInterface } from "./src/models/user.model"
 import { createServer } from "http"
 import { Server } from "socket.io"
-import { initializeSocket } from "./socket"
+import { initializeSocket } from "./src/socket"
 
 
 declare module "express" {
@@ -38,13 +38,13 @@ app.use(express.static("public"))
 app.use(cookieParser())
 
 // Route imports
-import userRouter from "./routes/user.route"
-import followRouter from "./routes/follow.route"
-import postRouter from "./routes/post.route"
-import commmentRouter from "./routes/comment.route"
-import chatRouter from "./routes/chat.route"
-import messageRouter from "./routes/message.route"
-import storyRouter from "./routes/story.route"
+import userRouter from "./src/routes/user.route"
+import followRouter from "./src/routes/follow.route"
+import postRouter from "./src/routes/post.route"
+import commmentRouter from "./src/routes/comment.route"
+import chatRouter from "./src/routes/chat.route"
+import messageRouter from "./src/routes/message.route"
+import storyRouter from "./src/routes/story.route"
 
 // Routes declarations
 app.use("/api/v1/users", userRouter)
