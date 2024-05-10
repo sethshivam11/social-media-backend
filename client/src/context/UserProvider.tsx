@@ -1,4 +1,6 @@
 import React from "react";
+import { toast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface UserInterface {
   fullName: string;
@@ -7,13 +9,12 @@ interface UserInterface {
   password: string;
   avatar: string;
   bio: string;
-  blocked: string[];
+  blocked: FollowUser[];
   followingCount: number;
   followersCount: number;
   postsCount: number;
   isBlueTick: boolean;
   isMailVerified: boolean;
-  refreshToken: string;
 }
 
 interface followUser {
@@ -22,14 +23,27 @@ interface followUser {
   avatar: string;
 }
 
-export interface Follow {
+// interface Follow {
+//   _id: string;
+//   followers: followUser[];
+//   followings: followUser[];
+// }
+
+interface FollowUser {
   _id: string;
-  followers: followUser[];
-  followings: followUser[];
+  avatar: string;
+  fullName: string;
+  username: string;
 }
 
 interface UserContext {
   user: UserInterface;
+  loading: boolean;
+  setLoading: Function;
+  followers: FollowUser[];
+  following: followUser[];
+  setFollowers: Function;
+  setFollowing: Function;
   fetchUser: Function;
   registerUser: Function;
   loginUser: Function;
@@ -43,7 +57,6 @@ interface UserContext {
   blockUser: Function;
   unblockUser: Function;
   renewAccessToken: Function;
-  isUsernameAvailable: Function;
 
   isLoggedIn: boolean;
   setIsLoggedIn: Function;
@@ -69,71 +82,32 @@ const initialState = {
     postsCount: 0,
     isBlueTick: false,
     isMailVerified: false,
-    refreshToken: "",
   },
+  followers: [],
+  following: [],
+  setFollowers: () => {},
+  setFollowing: () => {},
+  loading: false,
+  setLoading: () => {},
   isLoggedIn: false,
   setIsLoggedIn: () => {},
   fetchUser: () => {},
-  registerUser: (creds: {
-    fullName: string;
-    username: string;
-    email: string;
-    password: string;
-    avatar?: File;
-  }) => {
-    creds;
-  },
-  loginUser: (creds: {
-    password: string;
-    username?: string;
-    email?: string;
-  }) => {
-    creds;
-  },
+  registerUser: () => {},
+  loginUser: () => {},
   logoutUser: () => {},
   verifyMail: () => {},
-  updatePassword: (oldPassword: string, newPassword: string) => {
-    oldPassword;
-    newPassword;
-  },
-  updateAvatar: (avatar: File) => {
-    avatar;
-  },
+  updatePassword: () => {},
+  updateAvatar: () => {},
   removeAvatar: () => {},
-  updateDetails: (updates: {
-    fullName?: string;
-    email?: string;
-    username?: string;
-    bio?: string;
-  }) => {
-    updates;
-  },
+  updateDetails: () => {},
   updateBlueTick: () => {},
-  blockUser: (userId: string) => {
-    userId;
-  },
-  unblockUser: (userId: string) => {
-    userId;
-  },
+  blockUser: () => {},
+  unblockUser: () => {},
   renewAccessToken: () => {},
-  isUsernameAvailable: (username: string) => {
-    username;
-  },
-
-  follow: (userId: string) => {
-    userId;
-  },
-  unfollow: (userId: string) => {
-    userId;
-  },
-  getFollowers: (userId: string, page?: number) => {
-    userId;
-    page;
-  },
-  getFollowing: (userId: string, page?: number) => {
-    userId;
-    page;
-  },
+  follow: () => {},
+  unfollow: () => {},
+  getFollowers: () => {},
+  getFollowing: () => {},
   page: 0,
   setPage: () => {},
 };
@@ -141,7 +115,14 @@ const initialState = {
 const UserContext = React.createContext<UserContext>(initialState);
 
 export default function UserProvider(props: React.PropsWithChildren<{}>) {
-  const [user, setUser] = React.useState({
+  const navigate = useNavigate();
+
+  const storage = {
+    refreshToken: "sociial-refreshToken",
+    accessToken: "sociial-accessToken",
+  };
+
+  const [user, setUser] = React.useState<UserInterface>({
     fullName: "",
     email: "",
     username: "",
@@ -154,24 +135,34 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     postsCount: 0,
     isBlueTick: false,
     isMailVerified: false,
-    refreshToken: "",
   });
   const [page, setPage] = React.useState(1);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [followers, setFollowers] = React.useState<FollowUser[]>([]);
+  const [following, setFollowing] = React.useState<FollowUser[]>([]);
 
   function fetchUser() {
-    fetch("/api/v1/users/get")
+    setLoading(true);
+    fetch("/api/v1/users/get", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
+    })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          setUser(response.data);
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+      })
+      .finally(() => setLoading(false));
   }
 
   function registerUser(creds: {
@@ -181,6 +172,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     email: string;
     avatar?: File;
   }) {
+    setLoading(true);
     const formData = new FormData();
     formData.append("fullName", creds.fullName);
     formData.append("username", creds.username);
@@ -189,22 +181,32 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     if (creds.avatar) formData.append("avatar", creds.avatar);
     fetch("/api/v1/users/register", {
       method: "POST",
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
       body: formData,
     })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return loginUser(creds);
+          toast({
+            title: "Success",
+            description: response.message,
+          });
+          navigate("/sign-in");
+        } else {
+          toast({
+            title: "Error",
+            description: response.message || "Something went wrong!",
+          });
         }
-        return response.message;
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function loginUser(creds: {
@@ -212,6 +214,9 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     username?: string;
     email?: string;
   }) {
+    if (!(creds.username || creds.email))
+      return console.log("Either username or email is required");
+    setLoading(true);
     fetch("/api/v1/users/login", {
       method: "POST",
       headers: {
@@ -226,62 +231,103 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          setUser(response.data);
+          setUser(response.data.user);
+          localStorage.setItem(storage.accessToken, response.data.accessToken);
+          localStorage.setItem(
+            storage.refreshToken,
+            response.data.refreshToken
+          );
+          setIsLoggedIn(true);
+          if (!response.data.user.isMailVerified) {
+            navigate("/verify");
+          } else {
+            navigate("/");
+          }
         }
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function logoutUser() {
+    setLoading(true);
     fetch("/api/v1/users/logout")
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser({
-            fullName: "",
-            email: "",
-            username: "",
-            password: "",
-            avatar: "",
-            bio: "",
-            blocked: [],
-            followingCount: 0,
-            followersCount: 0,
-            postsCount: 0,
-            isBlueTick: false,
-            isMailVerified: false,
-            refreshToken: "",
+          setUser(initialState.user);
+          toast({
+            title: "Success",
+            description: response.message,
           });
+          navigate("/sign-in");
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function verifyMail() {
-    fetch("/api/v1/users/verifyMail")
+    setLoading(true);
+    fetch("/api/v1/users/verifyMail", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
+    })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          setUser({
+            ...user,
+            isMailVerified: true,
+          });
+          toast({
+            title: "Success",
+            description: response.message,
+          });
+          navigate("/");
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function updatePassword(oldPassword: string, newPassword: string) {
+    setLoading(true);
     fetch("/api/v1/users/changePassword", {
       method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
       body: JSON.stringify({
         oldPassword,
         newPassword,
@@ -290,52 +336,96 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          toast({
+            title: "Success",
+            description: response.message,
+          });
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
         console.error(err);
-        return "Something went wrong";
-      });
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function updateAvatar(avatar: File) {
+    setLoading(true);
     const formData = new FormData();
     formData.append("avatar", avatar);
     fetch("/api/v1/users/updateAvatar", {
       method: "PATCH",
       headers: {
-        "Content-Type": "Multipart/form-data",
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
       body: formData,
     })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          setUser({
+            ...user,
+            avatar: response.data.avatar,
+          });
+          toast({
+            title: "Success",
+            description: response.message,
+          });
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function removeAvatar() {
-    fetch("/api/v1/users/removeAvatar")
+    setLoading(true);
+    fetch("/api/v1/users/removeAvatar", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
+    })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          setUser({
+            ...user,
+            avatar: response.data.avatar,
+          });
+          toast({
+            title: "Success",
+            description: response.message,
+          });
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function updateDetails(updates: {
@@ -344,139 +434,236 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     bio?: string;
     email?: string;
   }) {
+    if (!(updates.fullName || updates.bio || updates.email || updates.username))
+      return console.log("Atleast one update is required");
+    setLoading(true);
     fetch("/api/v1/users/updateDetails", {
       method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
       body: JSON.stringify(updates),
     })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          toast({
+            title: "Success",
+            description: response.message,
+          });
+          setUser({
+            ...user,
+            fullName: response.data.fullName,
+            bio: response.data.bio,
+            email: response.data.email,
+            username: response.data.username,
+          });
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function updateBlueTick() {
-    fetch("/api/v1/users/updateBlue")
+    setLoading(true);
+    fetch("/api/v1/users/updateBlue", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
+    })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          toast({
+            title: "Success",
+            description: response.message,
+          });
+          setUser({
+            ...user,
+            isBlueTick: response.data.isBlueTick,
+          });
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
-  function blockUser(userId: string) {
-    fetch(`/api/v1/users/block/${userId}`)
+  function blockUser(userToBeBlocked: FollowUser) {
+    setLoading(true);
+    fetch(`/api/v1/users/block/${userToBeBlocked._id}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
+    })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          setUser({
+            ...user,
+            blocked: [...user.blocked, userToBeBlocked],
+          });
+          toast({
+            title: "Success",
+            description: response.message,
+          });
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
-  function unblockUser(userId: string) {
-    fetch(`/api/v1/users/unblock/${userId}`)
+  function unblockUser(userToBeUnblocked: FollowUser) {
+    setLoading(true);
+    fetch(`/api/v1/users/unblock/${userToBeUnblocked._id}`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
+    })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          const filteredUsers = user.blocked.filter(
+            (blocked) => blocked._id !== userToBeUnblocked._id
+          );
+          setUser({
+            ...user,
+            blocked: filteredUsers,
+          });
+          toast({
+            title: "Success",
+            description: response.message,
+          });
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
   function renewAccessToken() {
+    setLoading(true);
     fetch("/api/v1/users/renewAccessToken", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ refreshToken: user.refreshToken }),
+      body: JSON.stringify({
+        refreshToken: localStorage.getItem(storage.accessToken),
+      }),
     })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          localStorage.removeItem(storage.accessToken);
+          localStorage.setItem(storage.accessToken, response.data.accessToken);
         }
-        return response.message;
       })
       .catch((err) => {
         console.error(err);
-        return "Something went wrong";
-      });
-  }
-
-  function isUsernameAvailable(username: string) {
-    if (!username?.trim()) {
-      return;
-    }
-    fetch(`/api/v1/users/usernameAvailable/${username}`)
-      .then((parsed) => parsed.json())
-      .then((response) => {
-        if (response.success) {
-          return response.message;
-        }
-        return response.message;
+        navigate("/sign-in");
+        toast({
+          title: "Please login again",
+        });
       })
-      .catch((err) => {
-        console.error(err);
-        return err.message || "Something went wrong";
-      });
+      .finally(() => setLoading(false));
   }
 
-  function follow(userId: string) {
-    fetch(`/api/v1/users/follow/${userId}`, {
+  function follow(user: FollowUser) {
+    setLoading(true);
+    fetch(`/api/v1/users/follow/${user._id}`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
     })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          setFollowing([...following, user]);
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Error following the user",
+          variant: "destructive",
+        });
+      })
+      .finally(() => setLoading(false));
   }
 
-  function unfollow(userId: string) {
-    fetch(`/api/v1/users/unfollow/${userId}`, {
+  function unfollow(user: FollowUser) {
+    setLoading(true);
+    fetch(`/api/v1/users/unfollow/${user._id}`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+      },
     })
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return setUser(response.data);
+          setFollowing(following.filter((follow) => follow._id !== user._id));
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
-      });
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Error unfollowing the user",
+          variant: "destructive",
+        });
+        return "Something went wrong!";
+      })
+      .finally(() => setLoading(false));
   }
 
   function getFollowers(userId: string, page?: number) {
@@ -484,13 +671,14 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return response.data;
+          setFollowers(response.data);
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
       });
   }
 
@@ -499,13 +687,14 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       .then((parsed) => parsed.json())
       .then((response) => {
         if (response.success) {
-          return response.data;
+          setFollowing(response.data);
         }
-        return response.message;
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error(err);
-        return "Something went wrong";
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
       });
   }
 
@@ -514,6 +703,12 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       value={{
         fetchUser,
         user,
+        followers,
+        following,
+        setFollowers,
+        setFollowing,
+        loading,
+        setLoading,
         isLoggedIn,
         setIsLoggedIn,
         registerUser,
@@ -528,7 +723,6 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
         blockUser,
         unblockUser,
         renewAccessToken,
-        isUsernameAvailable,
         follow,
         unfollow,
         getFollowing,

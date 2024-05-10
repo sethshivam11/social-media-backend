@@ -1,93 +1,96 @@
-import mongoose, { Schema, Document } from "mongoose"
-import { Like } from "./like.model"
-import { User } from "./user.model"
+import mongoose, { Schema, Document, ObjectId } from "mongoose";
+import { Like } from "./like.model";
+import { User } from "./user.model";
 
 interface PostInterface extends Document {
-    user: String,
-    caption: String,
-    media: String,
-    tags: String[],
-    likesCount: Number,
-    commentsCount: Number,
-    likePost(liker: string): Promise<PostInterface> | string,
-    dislikePost(disliker: string): Promise<PostInterface> | string,
-    post(): Promise<PostInterface>,
-    updatePostCount(): Promise<PostInterface>,
+  user: ObjectId;
+  caption: string;
+  media: string;
+  tags: string[];
+  likesCount: number;
+  commentsCount: number;
+  likePost(liker: ObjectId): Promise<PostInterface>;
+  dislikePost(disliker: ObjectId): Promise<PostInterface>;
+  post(): Promise<PostInterface>;
+  updatePostCount(): Promise<PostInterface>;
 }
 
-const postSchema = new Schema({
+const postSchema: Schema<PostInterface> = new Schema(
+  {
     user: {
-        type: Schema.Types.ObjectId,
-        required: true,
+      type: Schema.Types.ObjectId,
+      required: true,
     },
     caption: {
-        type: String,
+      type: String,
     },
     media: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
-    tags: [{
+    tags: [
+      {
         type: Schema.Types.ObjectId,
-        ref: "user"
-    }],
+        ref: "user",
+      },
+    ],
     likesCount: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
     commentsCount: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
-}, {
-    timestamps: true
-})
+  },
+  {
+    timestamps: true,
+  }
+);
 
 postSchema.methods.updatePostCount = async function () {
-    await User.findByIdAndUpdate(
-        this.user,
-        {
-            $inc: { postsCount: 1 }
-        },
-        { new: true })
-    return this
-}
+  await User.findByIdAndUpdate(
+    this.user,
+    {
+      $inc: { postsCount: 1 },
+    },
+    { new: true }
+  );
+  return this;
+};
 
-postSchema.methods.likePost = async function (liker: String) {
-    const react = await Like.findOne({ user: liker, post: this._id })
-    if (react) {
-        return "You have already liked this post"
-    }
+postSchema.methods.likePost = async function (liker: ObjectId) {
+  const react = await Like.findOne({ user: liker, post: this._id });
+  if (react) {
+    return "You have already liked this post";
+  }
 
-    await Like.create({
-        user: liker,
-        post: this._id
-    })
+  await Like.create({
+    user: liker,
+    post: this._id,
+  });
 
-    this.likesCount += 1
-    await this.save()
+  this.likesCount += 1;
+  await this.save();
 
-    return this
-}
+  return this;
+};
 
-postSchema.methods.dislikePost = async function (disliker: String) {
-    const react = await Like.findOne({ user: disliker, post: this._id })
+postSchema.methods.dislikePost = async function (disliker: ObjectId) {
+  const react = await Like.findOne({ user: disliker, post: this._id });
 
-    if (!react) {
-        return "You have already disliked this post"
-    }
+  if (!react) {
+    return "You have already disliked this post";
+  }
 
-    if (this.reactsCount > 0) {
-        this.reactsCount -= 1
-    }
+  if (this.reactsCount > 0) {
+    this.reactsCount -= 1;
+  }
 
-    await this.save()
-    await react.deleteOne()
+  await this.save();
+  await react.deleteOne();
 
-    return this
-}
+  return this;
+};
 
-
-
-
-export const Post = mongoose.model<PostInterface>("post", postSchema)
+export const Post = mongoose.model("post", postSchema);

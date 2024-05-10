@@ -1,55 +1,43 @@
-import mongoose, { Schema, Document } from "mongoose"
-import { Chat } from "./chat.model"
+import mongoose, { Schema, Document, ObjectId } from "mongoose";
 
 interface MessageInterface extends Document {
-    sender: String,
-    chat: String,
-    content: String,
-    viewOnce: Boolean,
-    reacts: { content: string, user: string }[],
-    attachments: string[]
+  sender: ObjectId;
+  chat: ObjectId;
+  content: string;
+  viewOnce: boolean;
+  reacts: { content: string; user: string }[];
+  attachments: string[];
+  readBy: ObjectId[];
 }
 
-const messageSchema = new Schema({
+const messageSchema: Schema<MessageInterface> = new Schema(
+  {
     sender: {
-        type: Schema.Types.ObjectId,
-        ref: "user",
-        required: true,
+      type: Schema.Types.ObjectId,
+      ref: "user",
+      required: true,
     },
     chat: {
-        type: Schema.Types.ObjectId,
-        ref: "chat",
-        required: true,
+      type: Schema.Types.ObjectId,
+      ref: "chat",
+      required: true,
     },
     content: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
-    attachments:
-        [{
-            url: String,
-        }],
+    attachments: [String],
     reacts: Array,
-    readBy: [{
+    readBy: [
+      {
         type: Schema.Types.ObjectId,
         ref: "user",
-    }]
-}, {
+      },
+    ],
+  },
+  {
     timestamps: true,
-})
+  }
+);
 
-messageSchema.pre("save", async function (next) {
-    const chat = await Chat.findById(this.chat)
-    if (!chat) {
-        return
-    }
-    if (this.content) {
-        chat.lastMessage = this.content
-    }
-    else {
-        chat.lastMessage = "Attachment"
-    }
-    await chat.save()
-})
-
-export const Message = mongoose.model<MessageInterface>("message", messageSchema)
+export const Message = mongoose.model("message", messageSchema);

@@ -10,16 +10,16 @@ import { ThemeProvider } from "./context/ThemeProvider.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <ThemeProvider>
-    <UserProvider>
-      <PostProvider>
-        <ChatProvider>
-          <SocketProvider>
-            <BrowserRouter>
+    <BrowserRouter>
+      <UserProvider>
+        <PostProvider>
+          <ChatProvider>
+            <SocketProvider>
               <App />
-            </BrowserRouter>
-          </SocketProvider>
-        </ChatProvider>
-      </PostProvider>
-    </UserProvider>
+            </SocketProvider>
+          </ChatProvider>
+        </PostProvider>
+      </UserProvider>
+    </BrowserRouter>
   </ThemeProvider>
 );

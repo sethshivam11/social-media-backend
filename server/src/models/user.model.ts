@@ -1,123 +1,133 @@
-import mongoose, { Schema, Document } from "mongoose"
-import bcrypt from "bcrypt"
-import jwt from "jsonwebtoken"
-import { DEFAULT_USER_AVATAR } from "../constants"
+import mongoose, { Schema, Document } from "mongoose";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { DEFAULT_USER_AVATAR } from "../constants";
 
 export interface UserInterface extends Document {
-    avatar: String
-    fullName: String
-    username: String,
-    email: String
-    password?: String
-    bio: String
-    blocked: string[],
-    followingCount: Number
-    followersCount: Number
-    postsCount: Number
-    isBlueTick: Boolean
-    isMailVerified: Boolean
-    refreshToken?: String,
-    isPasswordCorrect(password: string): boolean,
-    generateRefreshToken(): string,
-    generateAccessToken(): string,
+  avatar: string;
+  fullName: string;
+  username: string;
+  email: string;
+  password?: string;
+  bio: string;
+  blocked: string[];
+  followingCount: number;
+  followersCount: number;
+  postsCount: number;
+  isBlueTick: boolean;
+  isMailVerified: boolean;
+  refreshToken?: string;
+  verifyToken: string;
+  verifyTokenExpiry: Date;
+  isPasswordCorrect(password: string): boolean;
+  generateRefreshToken(): string;
+  generateAccessToken(): string;
 }
 
-
-const userSchema = new Schema({
+const userSchema: Schema<UserInterface> = new Schema(
+  {
     avatar: {
-        type: String,
-        default: DEFAULT_USER_AVATAR,
+      type: String,
+      default: DEFAULT_USER_AVATAR,
     },
     fullName: {
-        type: String,
-        required: true,
-        trim: true,
+      type: String,
+      required: true,
+      trim: true,
     },
     username: {
-        type: String,
-        required: true,
-        trim: true,
-        unique: true,
-        index: true,
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+      index: true,
     },
     email: {
-        type: String,
-        required: true,
-        trim: true,
-        index: true,
-        unique: true,
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+      unique: true,
     },
     password: {
-        type: String,
-        required: true,
+      type: String,
+      required: true,
     },
     bio: {
-        type: String,
+      type: String,
     },
     followingCount: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
     followersCount: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
     postsCount: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
     isBlueTick: {
-        type: Boolean,
-        default: false,
+      type: Boolean,
+      default: false,
     },
     isMailVerified: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
-    blocked: [{
+    verifyToken: String,
+    verifyTokenExpiry: Date,
+    blocked: [
+      {
         type: Schema.Types.ObjectId,
-        ref: "user"
-    }],
+        ref: "user",
+      },
+    ],
     refreshToken: String,
-},
-    {
-        timestamps: true
-    })
-
+  },
+  {
+    timestamps: true,
+  }
+);
 
 userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next()
-    this.password = await bcrypt.hash(this.password, 10)
-})
+  if (!this.isModified("password")) return next();
+  this.password = await bcrypt.hash(this.password as string, 10);
+});
 
 userSchema.methods.isPasswordCorrect = async function (password: string) {
-    return await bcrypt.compare(password, this.password)
-}
+  return await bcrypt.compare(password, this.password);
+};
 
 userSchema.methods.generateAccessToken = async function () {
-    return await jwt.sign({
-        _id: this._id,
-        fullName: this.fullName,
-        email: this.email,
-        username: this.username
+  return await jwt.sign(
+    {
+      _id: this._id,
+      fullName: this.fullName,
+      email: this.email,
+      username: this.username,
     },
-        process.env.ACCESS_TOKEN_SECRET as string,
-        {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY as string
-        })
-}
+    process.env.ACCESS_TOKEN_SECRET as string,
+    {
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY as string,
+    }
+  );
+};
 
 userSchema.methods.generateRefreshToken = async function () {
-    return await jwt.sign({
-        _id: this._id,
-        fullName: this.fullName,
-        email: this.email,
-        username: this.username
+  return await jwt.sign(
+    {
+      _id: this._id,
+      fullName: this.fullName,
+      email: this.email,
+      username: this.username,
     },
-        process.env.REFRESH_TOKEN_SECRET as string,
-        {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY as string
-        })
-}
+    process.env.REFRESH_TOKEN_SECRET as string,
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY as string,
+    }
+  );
+};
 
-export const User = mongoose.model<UserInterface>("user", userSchema)
+export const User = mongoose.model<UserInterface>("user", userSchema);

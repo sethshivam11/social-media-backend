@@ -1,27 +1,31 @@
-import mongoose, { Schema, Document } from "mongoose"
+import mongoose, { Schema, Document, ObjectId } from "mongoose";
 
 interface LikeInterface extends Document {
-    content: String
-    user: String
+  content: string;
+  user: ObjectId;
+  post: ObjectId;
 }
 
-const likeSchema = new Schema({
+const likeSchema: Schema<LikeInterface> = new Schema(
+  {
     content: {
-        type: String,
-        default: "❤️"
+      type: String,
+      default: "❤️",
     },
     user: {
-        type: Schema.Types.ObjectId,
-        required: true,
-        ref: "user"
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "user",
     },
     post: {
-        type: Schema.Types.ObjectId,
-        required: true,
-        ref: "post"
-    }
-}, {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "post",
+    },
+  },
+  {
     timestamps: true,
-})
+  }
+);
 
-export const Like = mongoose.model<LikeInterface>("like", likeSchema)
+export const Like = mongoose.model("like", likeSchema);

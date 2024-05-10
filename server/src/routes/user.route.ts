@@ -15,12 +15,12 @@ router.route("/login").post(loginUser)
 
 router.route("/usernameAvailable/:username").get(isUsernameAvailable)
 
+router.route("/verify").get(verifyEmail)
+
 
 // Verified routes
 
 router.route("/get").get(verifyJWT, getCurrentUser)
-
-router.route("/verifyMail").get(verifyJWT, verifyEmail)
 
 router.route("/logout").post(verifyJWT, logoutUser)
 

@@ -7,8 +7,16 @@ import bgDarkDoodle from "/bg-doodle-white.jpg";
 import { useDebounceCallback } from "usehooks-ts";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import CheckboxWithLabel from "./CheckboxWithLabel";
+import { useUser } from "@/context/UserProvider";
 
 interface FormInput {
   fullName: string;
@@ -18,22 +26,78 @@ interface FormInput {
 }
 
 function SignupPage() {
-  const { handleSubmit, register } = useForm<FormInput>();
+  const form = useForm<FormInput>({
+    defaultValues: {
+      email: "",
+      fullName: "",
+      username: "",
+      password: "",
+    },
+  });
+  const { getValues } = form;
+  const { loading, registerUser } = useUser();
   const [showPwd, setShowPwd] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
   const [username, setUsername] = React.useState("");
-  // const [isCheckingUsername, setIsCheckingUsername] = React.useState(false);
+  const [passwordsMatchMessage, setPasswordsMatchMessage] = React.useState("");
   const [confirmPwd, setConfirmPwd] = React.useState("");
-  // const [avatar, setAvatar] = React.useState<File | null>(null);
-  const [usernameMessage, setUsernameMessage] = React.useState("");
+  const [avatar, setAvatar] = React.useState<FileList | null>(null);
   const debounced = useDebounceCallback(setUsername, 500);
+  const [isFetchingUsername, setIsFetchingUsername] = React.useState(false);
+  const [usernameMessage, setUsernameMessage] = React.useState("");
 
-  const onSubmit: SubmitHandler<FormInput> = async (data) => {
-    console.log(data);
-    username;
-    setIsLoading(false);
-    setUsernameMessage("")
+  const onSubmit: SubmitHandler<FormInput> = async ({
+    fullName,
+    email,
+    username,
+    password,
+  }) => {
+    if (password !== confirmPwd) {
+      return console.log("Passwords do not match");
+    }
+    await registerUser({
+      email,
+      fullName,
+      username,
+      password,
+      avatar: avatar ? avatar[0] : null,
+    });
   };
+
+  function isUsernameAvailable(username: string) {
+    if (!username?.trim()) {
+      return;
+    }
+    setIsFetchingUsername(true);
+    fetch(`/api/v1/users/usernameAvailable/${username}`)
+      .then((parsed) => parsed.json())
+      .then((response) => {
+        setUsernameMessage(response.message);
+      })
+      .catch((err) => {
+        console.error(err);
+        setUsernameMessage(err.message || "Error checking username");
+      })
+      .finally(() => setIsFetchingUsername(false));
+  }
+
+  React.useEffect(() => {
+    if (username.startsWith(".")) {
+      setUsernameMessage("Username cannot start with .");
+    } else if (username && /^[a-z]._+$/.test(username)) {
+      setUsernameMessage("Username must contain only lowercase, ., _");
+    } else if (username.trim()) {
+      isUsernameAvailable(username);
+    } else {
+      setUsernameMessage("");
+    }
+  }, [username]);
+
+  React.useEffect(() => {
+    if (confirmPwd !== getValues("password")) {
+      return setPasswordsMatchMessage("Passwords do not match");
+    }
+    setPasswordsMatchMessage("");
+  }, [confirmPwd]);
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-zinc-800">
@@ -54,99 +118,163 @@ function SignupPage() {
           </h1>
           <p className="mb-4">Sign up to start to your journey with us</p>
         </div>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="fullName">Name</Label>
-            <Input
-              {...register("fullName")}
-              type="text"
-              id="fullName"
-              placeholder="Name"
-              autoComplete="name"
-              inputMode="text"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="fullName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      autoComplete="name"
+                      inputMode="text"
+                      placeholder="name"
+                      autoFocus
+                      required
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              {...register("email")}
-              type="email"
-              id="email"
-              placeholder="Email"
-              autoComplete="email"
-              inputMode="email"
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="email"
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      required
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              {...register("username")}
-              type="text"
-              id="username"
-              placeholder="Username"
-              autoComplete="username"
-              inputMode="text"
-              onChange={(e) => debounced(e.target.value)}
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="username"
+                      type="username"
+                      max={30}
+                      autoComplete="username"
+                      inputMode="text"
+                      required
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        debounced(e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <span
+                    className={`text-sm ${
+                      usernameMessage === "Username available"
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {!isFetchingUsername && usernameMessage}
+                  </span>
+                  {isFetchingUsername ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    ""
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          {usernameMessage ?? ""}
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              {...register("password")}
-              type={showPwd ? "text" : "password"}
-              id="passwod"
-              placeholder="Password"
-              autoComplete="new-password"
-              inputMode="text"
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="password"
+                      type={showPwd ? "text" : "password"}
+                      autoComplete="new-password"
+                      inputMode="text"
+                      required
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="password">Confirm Password</Label>
-            <Input
-              value={confirmPwd}
-              onChange={(e) => setConfirmPwd(e.target.value)}
-              type={showPwd ? "text" : "password"}
-              id="password"
-              placeholder="Confirm Password"
-              autoComplete="current-password webauthn"
-              inputMode="text"
+            <FormField
+              name="confirmPassword"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="confirm password"
+                      value={confirmPwd}
+                      type={showPwd ? "text" : "password"}
+                      autoComplete="new-password webauthn"
+                      inputMode="text"
+                      required
+                      onChange={(e) => setConfirmPwd(e.target.value)}
+                    />
+                  </FormControl>
+                  <span className="text-sm text-red-400">
+                    {passwordsMatchMessage ?? ""}
+                  </span>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="grid w-full max-w-sm items-center gap-1.5">
-            <Label htmlFor="avatar">Profile Picture</Label>
-            <Input
-              // onChange={(e) => setAvatar(e.target.files[0])}
-              type="file"
-              id="avatar"
-              accept="image/jpeg image/png image/jpg"
-              placeholder="Profile Picture"
+            <FormField
+              name="avatar"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Profile picture</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="profile pic"
+                      type="file"
+                      autoComplete="off"
+                      onChange={(e) => setAvatar(e.target.files)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-
-          <CheckboxWithLabel
-            text="Show Password"
-            checked={showPwd}
-            setChecked={setShowPwd}
-          />
-          <div className="flex items-center justify-start gap-2">
-            <Button color="primary" size="lg" type="submit">
-              {isLoading ? <Loader2 className="animate-spin" /> : "Sign In"}
+            <CheckboxWithLabel
+              text="Show Password"
+              checked={showPwd}
+              setChecked={setShowPwd}
+            />
+            <Button type="submit" disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : "Sign up"}
             </Button>
-            <Link to="/sign-in">
-              <Button
-                color="primary"
-                size="lg"
-                variant="outline"
-                className="dark:text-white"
-                type="button"
-                disabled={isLoading}
-              >
-                Sign Up
-              </Button>
-            </Link>
-          </div>
-        </form>
+          </form>
+        </Form>
+        <p className="text-center mt-2">
+          Already have an account?&nbsp;
+          <Link to="/sign-in" className="text-blue-500">
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   );

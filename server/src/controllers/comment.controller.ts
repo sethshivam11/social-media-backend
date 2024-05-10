@@ -85,7 +85,7 @@ const deleteComment = asyncHandler(
         }
 
         await comment.deleteOne()
-        await comment.updateCommentsCount(comment.post as string, -1)
+        await comment.updateCommentsCount(comment.post, -1)
 
         return res.status(200).json(
             new ApiResponse(200, {}, "Comment deleted successfully")

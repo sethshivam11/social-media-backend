@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Follow, FollowInterface } from "../models/follow.model";
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
@@ -21,19 +22,20 @@ const follow = asyncHandler(
             throw new ApiError(400, "Followee is required")
         }
 
+        const followeeId = new mongoose.Schema.Types.ObjectId(followee);
         const follow: FollowInterface | null = await Follow.findOne({ user: _id })
 
         // Create new follow if null
         if (!follow) {
             const newFollow = await Follow.create({
                 user: _id,
-                followings: [followee]
+                followings: [followeeId]
             })
 
             if (!newFollow) {
                 throw new ApiError(400, "Something went wrong, while updating the followers")
             }
-            await newFollow.follow(followee)
+            await newFollow.follow(followeeId)
 
             return res.status(200).json(
                 new ApiResponse(200, newFollow, "Followed user")
@@ -42,13 +44,13 @@ const follow = asyncHandler(
 
         // Update follow if found
         else {
-            if (follow.followings.includes(followee)) {
+            if (follow.followings.includes(followeeId)) {
                 throw new ApiError(409, "Follower already followed")
             }
-            follow.followings = [...follow.followings, followee]
+            follow.followings = [...follow.followings, followeeId]
 
             await follow.save().then(async () =>
-                await follow.follow(followee))
+                await follow.follow(followeeId))
 
             return res.status(200).json(
                 new ApiResponse(200, follow, "Followed user")
@@ -68,19 +70,20 @@ const unfollow = asyncHandler(
             throw new ApiError(400, "Unfollowee is required")
         }
 
+        const unfolloweeId = new mongoose.Schema.Types.ObjectId(unfollowee)
         const follow: FollowInterface | null = await Follow.findOne({ user: _id })
 
         if (!follow) {
             throw new ApiError(404, "Follow not found")
         }
 
-        if (!follow.followings.includes(unfollowee)) {
+        if (!follow.followings.includes(unfolloweeId)) {
             throw new ApiError(404, "Follower already unfollowed")
         }
 
         await follow.updateOne({ $pull: { followings: unfollowee } }, { new: true })
             .then(async () =>
-                await follow.unfollow(unfollowee)
+                await follow.unfollow(unfolloweeId)
             )
 
         return res.status(200).json(
