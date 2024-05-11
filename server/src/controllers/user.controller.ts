@@ -7,7 +7,6 @@ import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../constants";
 import sendEmail from "../helpers/mailer";
-import bcrypt from "bcrypt";
 
 export interface File {
   fieldname: string;
@@ -72,8 +71,12 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     $or: [{ username }, { email }],
   });
 
-  if (existedUser) {
+  if (existedUser && existedUser.isMailVerified) {
     throw new ApiError(409, "Username or email already exists");
+  }
+
+  if (!existedUser?.isMailVerified) {
+    await existedUser?.deleteOne();
   }
 
   const avatarLocalPath = (req.file as File)?.path;
@@ -86,12 +89,17 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  const verifyCode = Math.floor(Math.random() * 900000);
+  const verifyCodeExpiry = Date.now() + 600_000;
+
   const user = await User.create({
     fullName,
     email,
     password,
     username,
     avatar: avatar?.url,
+    verifyCode,
+    verifyCodeExpiry,
   });
 
   if (!user) {
@@ -100,7 +108,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
 
   const newUser = removeSensitiveData(user);
 
-  await sendEmail(email, user._id.toString());
+  await sendEmail(email, verifyCode, username);
 
   return res
     .status(201)
@@ -159,13 +167,28 @@ const getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
-  const { token } = req.query;
+  const { code, username } = req.query;
 
-  const userWithToken = await User.findOne({ verifyToken: token });
+  const userWithCode = await User.findOne({ username });
 
-  if (!userWithToken) {
-    throw new ApiError(404, "Invalid token");
+  if (!userWithCode) {
+    throw new ApiError(404, "User with username not found");
   }
+
+  const isCodeInvalid = userWithCode.verifyCode === code;
+  const isCodeExpired = new Date(userWithCode.verifyCodeExpiry) > new Date();
+
+  if (!isCodeInvalid) {
+    throw new ApiError(401, "Invalid code");
+  }
+
+  if (isCodeExpired) {
+    throw new ApiError(401, "Code has expired, Please request a new one");
+  }
+
+  userWithCode.verifyCode = "";
+  userWithCode.isMailVerified = true;
+  await userWithCode.save();
 
   return res.status(200).json(new ApiResponse(200, {}, "User verified"));
 });
@@ -459,7 +482,7 @@ const isUsernameAvailable = asyncHandler(
     if (username.length >= 30) {
       throw new ApiError(400, "Username must be less than 30 letters");
     }
-    if (username.trim() && !/^[a-z_.]+$/.test(username)) {
+    if (username.trim() && !/^[a-z_1-9.]+$/.test(username)) {
       throw new ApiError(400, "Username must contain only lowercase, ., _");
     }
     if (username.startsWith(".")) {
@@ -467,7 +490,7 @@ const isUsernameAvailable = asyncHandler(
     }
 
     const user = await User.findOne({ username });
-    if (user) {
+    if (user && user.isMailVerified) {
       throw new ApiError(400, "Username not available");
     }
 

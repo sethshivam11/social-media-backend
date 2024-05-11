@@ -27,7 +27,7 @@ export default function SocketProvider(props: React.PropsWithChildren<{}>) {
   
   React.useEffect(() => {
     if (!token) return console.log("No token found");
-    console.log(token);
+    // console.log(token);
     socket.on("connect", () => {
       console.log("Connected");
     });

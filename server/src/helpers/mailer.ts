@@ -1,6 +1,4 @@
 import nodemailer from "nodemailer";
-import bcrypt from "bcrypt";
-import { User } from "../models/user.model";
 import { Email } from "./email";
 
 const transporter = nodemailer.createTransport({
@@ -13,31 +11,22 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmail = async function (email: string, userId: string) {
+const sendEmail = async function (
+  email: string,
+  code: number,
+  username: string
+) {
   try {
-    const hashedToken = await bcrypt.hash(userId, 10);
-    const verifyTokenExpiry = new Date(Date.now() + 24 * 3600000);
-
     const updatedHtml = Email.replace(
       "https://sociial.onrender.com/verify",
-      `https://sociial.onrender.com/verify?token=${hashedToken}`
-    );
-    console.log(updatedHtml);
-
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        verifyToken: hashedToken,
-        verifyTokenExpiry,
-      },
-      { new: true }
-    );
+      `https://sociial.onrender.com/verify?code=${code}&username=${username}`
+    ).replace("$%code%$", `${code}`);
 
     await transporter.sendMail({
       from: process.env.MAIL_USER,
       to: email,
-      subject: "Verify mail",
-      text: `Click the link to verify your account https://sociial.onrender.com/verify?token=${hashedToken}`,
+      subject: "Verify mail - Activate your account",
+      text: `Click the link to verify your account https://sociial.onrender.com/verify?code=${code}&username=${username} at sociial.\nIf you did not request for this code, please ignore this mail.`,
       html: updatedHtml,
     });
   } catch (error) {

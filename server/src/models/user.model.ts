@@ -17,8 +17,8 @@ export interface UserInterface extends Document {
   isBlueTick: boolean;
   isMailVerified: boolean;
   refreshToken?: string;
-  verifyToken: string;
-  verifyTokenExpiry: Date;
+  verifyCode: string;
+  verifyCodeExpiry: Date;
   isPasswordCorrect(password: string): boolean;
   generateRefreshToken(): string;
   generateAccessToken(): string;
@@ -76,8 +76,8 @@ const userSchema: Schema<UserInterface> = new Schema(
       type: Boolean,
       default: false,
     },
-    verifyToken: String,
-    verifyTokenExpiry: Date,
+    verifyCode: String,
+    verifyCodeExpiry: Date,
     blocked: [
       {
         type: Schema.Types.ObjectId,

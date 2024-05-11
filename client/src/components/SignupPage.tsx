@@ -100,18 +100,18 @@ function SignupPage() {
   }, [confirmPwd]);
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-zinc-800">
+    <div className="flex justify-center items-center min-h-screen dark:bg-zinc-800">
       <img
         src={bgDoodle}
         alt=""
-        className="absolute object-cover h-full w-full blur-sm hidden dark:block"
+        className="absolute object-cover h-[60rem] w-full blur-sm hidden dark:block top-0"
       />
       <img
         src={bgDarkDoodle}
         alt=""
-        className="absolute object-cover h-full w-full blur-sm dark:hidden"
+        className="absolute object-cover h-[60rem] w-full blur-sm dark:hidden top-0"
       />
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-zinc-900 ring-2 ring-zinc-500 dark:ring-zinc-200 rounded-lg shadow-md z-10">
+      <div className="w-full max-w-md p-8 space-y-8 last:space-y-3 my-4 bg-white dark:bg-zinc-900 ring-2 ring-zinc-500 dark:ring-zinc-200 rounded-lg shadow-md z-10">
         <div className="text-center  text-black dark:text-white">
           <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-6">
             Join Sociial
@@ -271,8 +271,8 @@ function SignupPage() {
         </Form>
         <p className="text-center mt-2">
           Already have an account?&nbsp;
-          <Link to="/sign-in" className="text-blue-500">
-            Sign up
+          <Link to="/sign-in" className="text-blue-500" type="button">
+            Sign In
           </Link>
         </p>
       </div>
