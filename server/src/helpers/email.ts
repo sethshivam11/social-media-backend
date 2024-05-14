@@ -196,6 +196,7 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                               font-size: 1.8rem;
                               font-weight: bold;
                               letter-spacing: -0.025rem;
+                              margin: 20px 0;
                             "
                             >Sociial</span
                           >

@@ -190,7 +190,8 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
             title: "Success",
             description: response.message,
           });
-          navigate("/sign-in");
+          const username = response.data.username;
+          navigate(`/verify?username=${username}`);
         } else {
           toast({
             title: "Error",
@@ -284,12 +285,11 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       .finally(() => setLoading(false));
   }
 
-  function verifyMail() {
+  function verifyMail({ username, code }: { username: string; code: string }) {
     setLoading(true);
-    fetch("/api/v1/users/verifyMail", {
+    fetch(`/api/v1/users/verify?code=${code}&username=${username}`, {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())

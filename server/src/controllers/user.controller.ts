@@ -169,6 +169,10 @@ const getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
 const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const { code, username } = req.query;
 
+  if (!code || !username) {
+    throw new ApiError(400, "Code and username are required");
+  }
+
   const userWithCode = await User.findOne({ username });
 
   if (!userWithCode) {
@@ -182,7 +186,7 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "Invalid code");
   }
 
-  if (isCodeExpired) {
+  if (!isCodeExpired) {
     throw new ApiError(401, "Code has expired, Please request a new one");
   }
 
@@ -191,6 +195,30 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   await userWithCode.save();
 
   return res.status(200).json(new ApiResponse(200, {}, "User verified"));
+});
+
+const resendEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { username } = req.query;
+  if (!username || username === "") {
+    throw new ApiError(400, "Username is required");
+  }
+
+  const user = await User.findOne({ username });
+  if (!user) {
+    throw new ApiError(404, "Please check username or sign up again");
+  }
+
+  const verifyCode = Math.floor(Math.random() * 900000);
+  const verifyCodeExpiry = Date.now() + 600_000;
+
+  user.verifyCode = `${verifyCode}`;
+  user.verifyCodeExpiry = new Date(verifyCodeExpiry);
+
+  await user.save();
+
+  await sendEmail(user.email, verifyCode, username as string);
+
+  return res.status(200).json(new ApiResponse(200, {}, "Email sent"));
 });
 
 const logoutUser = asyncHandler(async (req: Request, res: Response) => {
@@ -513,4 +541,5 @@ export {
   unblockUser,
   renewAccessToken,
   isUsernameAvailable,
+  resendEmail,
 };
