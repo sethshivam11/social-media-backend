@@ -192,7 +192,7 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 
   userWithCode.verifyCode = "";
   userWithCode.isMailVerified = true;
-  await userWithCode.save();
+  await userWithCode.save({ validateBeforeSave: false });
 
   return res.status(200).json(new ApiResponse(200, {}, "User verified"));
 });
@@ -214,11 +214,42 @@ const resendEmail = asyncHandler(async (req: Request, res: Response) => {
   user.verifyCode = `${verifyCode}`;
   user.verifyCodeExpiry = new Date(verifyCodeExpiry);
 
-  await user.save();
+  await user.save({ validateBeforeSave: false });
 
   await sendEmail(user.email, verifyCode, username as string);
 
   return res.status(200).json(new ApiResponse(200, {}, "Email sent"));
+});
+
+const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { email, username, code, password } = req.body;
+
+  if (!(email || username) || !code || !password) {
+    throw new ApiError(400, "Email or username is required");
+  }
+
+  const user = await User.findOne({ $or: [{ email }, { username }] });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isCodeInvalid = user.verifyCode === code;
+  const isCodeExpired = new Date(user.verifyCodeExpiry) > new Date();
+
+  if (!isCodeInvalid) {
+    throw new ApiError(401, "Invalid code");
+  }
+  if (!isCodeExpired) {
+    throw new ApiError(401, "Code has expired, Please request a new one");
+  }
+
+  user.password = password;
+  user.verifyCode = "";
+  await user.save({ validateBeforeSave: true });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password was changed successfully"));
 });
 
 const logoutUser = asyncHandler(async (req: Request, res: Response) => {
@@ -534,6 +565,7 @@ export {
   logoutUser,
   updateAvatar,
   removeAvatar,
+  forgotPassword,
   updatePassword,
   updateDetails,
   updateBlueTickStatus,

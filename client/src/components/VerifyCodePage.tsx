@@ -75,13 +75,6 @@ const VerifyCodePage = () => {
   }
 
   React.useEffect(() => {
-    const runningTimer = setInterval(() => {
-      if (timer > 0) {
-        setTimer((timer) => (timer -= 1));
-      }
-    }, 1000);
-    () => clearInterval(runningTimer);
-
     const params = search.replace("?", "").split("&");
     params.map((param: string) => {
       if (param.includes("code")) {
@@ -95,6 +88,15 @@ const VerifyCodePage = () => {
     });
   }, [search]);
 
+  React.useEffect(() => {
+    if (timer > 0) {
+      const runningTimer = setInterval(() => {
+        setTimer((timer) => (timer -= 1));
+      }, 1000);
+      () => clearInterval(runningTimer);
+    }
+  }, [timer]);
+
   return (
     <Form {...form}>
       <form
@@ -103,7 +105,9 @@ const VerifyCodePage = () => {
       >
         <Card className="w-fit space-y-2 ring-1 ring-gray-400 p-10">
           <CardHeader>
-            <CardTitle className="text-4xl font-extrabold tracking-tight text-center lg:text-5xl mb-6">Verify your account</CardTitle>
+            <CardTitle className="text-4xl font-extrabold tracking-tight text-center lg:text-5xl mb-6">
+              Verify your account
+            </CardTitle>
             <CardDescription>
               Please enter the verification code sent to your email.
             </CardDescription>
@@ -117,10 +121,11 @@ const VerifyCodePage = () => {
                   <FormLabel>Code</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Enter verification code"
-                      {...field}
+                      placeholder="verification code"
                       inputMode="numeric"
                       autoComplete="one-time-code"
+                      autoFocus
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

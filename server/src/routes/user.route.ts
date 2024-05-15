@@ -16,6 +16,7 @@ import {
   isUsernameAvailable,
   removeAvatar,
   resendEmail,
+  forgotPassword,
 } from "../controllers/user.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -32,6 +33,8 @@ router.route("/usernameAvailable/:username").get(isUsernameAvailable);
 router.route("/verify").get(verifyEmail);
 
 router.route("/resendMail").get(resendEmail);
+
+router.route("/forgotPassword").post(forgotPassword);
 
 // Verified routes
 

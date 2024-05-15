@@ -9,6 +9,7 @@ import SignupPage from "./components/SignupPage";
 import { useUser } from "./context/UserProvider";
 import { Toaster } from "@/components/ui/toaster";
 import VerifyCodePage from "./components/VerifyCodePage";
+import ForgotPasswordPage from "./components/ForgotPasswordPage";
 
 function App() {
   const { isLoggedIn } = useUser();
@@ -21,6 +22,10 @@ function App() {
         <Route
           element={isLoggedIn ? <Navigate to="/" /> : <LoginPage />}
           path="/sign-in"
+        />
+        <Route
+          element={isLoggedIn ? <Navigate to="/" />: <ForgotPasswordPage />}
+          path="/forgot-password"
         />
         <Route
           element={isLoggedIn ? <Navigate to="/" /> : <SignupPage />}

@@ -63,7 +63,7 @@ function LoginPage() {
           <p className="mb-4">Sign in to continue to your journey with us</p>
         </div>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
               name="identifier"
@@ -106,14 +106,24 @@ function LoginPage() {
               checked={showPwd}
               setChecked={setShowPwd}
             />
-            <Button type="submit" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : "Sign in"}
-            </Button>
+            <div>
+              <p className="mb-2">
+                <Link
+                  to="/forgot-password"
+                  className="text-blue-500 text-sm hover:opacity-80"
+                >
+                  Forgot Password?
+                </Link>
+              </p>
+              <Button type="submit" disabled={loading}>
+                {loading ? <Loader2 className="animate-spin" /> : "Sign in"}
+              </Button>
+            </div>
           </form>
         </Form>
         <p className="text-center mt-2">
           Don't have an account?&nbsp;
-          <Link to="/sign-up" className="text-blue-500">
+          <Link to="/sign-up" className="text-blue-500 hover:opacity-80">
             Sign up
           </Link>
         </p>

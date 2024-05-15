@@ -271,7 +271,7 @@ function SignupPage() {
         </Form>
         <p className="text-center mt-2">
           Already have an account?&nbsp;
-          <Link to="/sign-in" className="text-blue-500" type="button">
+          <Link to="/sign-in" className="text-blue-500 hover:opacity-80" type="button">
             Sign In
           </Link>
         </p>
