@@ -5,8 +5,8 @@ import { Loader2 } from "lucide-react";
 import bgDoodle from "/bg-doodle-2.jpg";
 import bgDarkDoodle from "/bg-doodle-white.jpg";
 import { useDebounceCallback } from "usehooks-ts";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import {
   Form,
   FormControl,
@@ -15,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import CheckboxWithLabel from "./CheckboxWithLabel";
+import CheckboxWithLabel from "../CheckboxWithLabel";
 import { useUser } from "@/context/UserProvider";
 
 interface FormInput {

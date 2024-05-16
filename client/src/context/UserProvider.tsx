@@ -147,7 +147,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     fetch("/api/v1/users/get", {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())
@@ -326,7 +326,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
       body: JSON.stringify({
         oldPassword,
@@ -364,7 +364,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       method: "PATCH",
       headers: {
         "Content-Type": "multipart/form-data",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
       body: formData,
     })
@@ -399,7 +399,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     fetch("/api/v1/users/removeAvatar", {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())
@@ -441,7 +441,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
       body: JSON.stringify(updates),
     })
@@ -479,7 +479,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     fetch("/api/v1/users/updateBlue", {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())
@@ -513,7 +513,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     fetch(`/api/v1/users/block/${userToBeBlocked._id}`, {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())
@@ -547,7 +547,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     fetch(`/api/v1/users/unblock/${userToBeUnblocked._id}`, {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())
@@ -613,7 +613,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())
@@ -642,7 +642,7 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
+        // Authorization: `Bearer ${localStorage.getItem(storage.accessToken)}`,
       },
     })
       .then((parsed) => parsed.json())
@@ -697,6 +697,13 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
         }
       });
   }
+
+  React.useEffect(() => {
+    if (localStorage.getItem(storage.accessToken)) {
+      setIsLoggedIn(true);
+      fetchUser();
+    }
+  }, []);
 
   return (
     <UserContext.Provider

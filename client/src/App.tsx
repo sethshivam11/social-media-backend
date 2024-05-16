@@ -1,21 +1,24 @@
 import "./App.css";
 import { Routes, Route, Navigate } from "react-router-dom";
-import HomePage from "./components/Homepage";
-import LoginPage from "./components/LoginPage";
+import HomePage from "./components/Pages/Homepage";
+import LoginPage from "./components/Pages/LoginPage";
 import Navbar from "./components/Navbar";
-import MessagesPage from "./components/MessagesPage";
-import ProfilePage from "./components/ProfilePage";
-import SignupPage from "./components/SignupPage";
+import MessagesPage from "./components/Pages/MessagesPage";
+import ProfilePage from "./components/Pages/ProfilePage";
+import SignupPage from "./components/Pages/SignupPage";
 import { useUser } from "./context/UserProvider";
 import { Toaster } from "@/components/ui/toaster";
-import VerifyCodePage from "./components/VerifyCodePage";
-import ForgotPasswordPage from "./components/ForgotPasswordPage";
+import VerifyCodePage from "./components/Pages/VerifyCodePage";
+import ForgotPasswordPage from "./components/Pages/ForgotPasswordPage";
+import Layout from "./components/Layout";
+import SearchPage from "./components/Pages/SearchPage";
+import CreatePost from "./components/Pages/CreatePost";
 
 function App() {
   const { isLoggedIn } = useUser();
   return (
     <>
-      <Navbar />
+      {!isLoggedIn && <Navbar />}
       <Toaster />
       <Routes>
         {/* Public Routes */}
@@ -24,7 +27,7 @@ function App() {
           path="/sign-in"
         />
         <Route
-          element={isLoggedIn ? <Navigate to="/" />: <ForgotPasswordPage />}
+          element={isLoggedIn ? <Navigate to="/" /> : <ForgotPasswordPage />}
           path="/forgot-password"
         />
         <Route
@@ -37,18 +40,28 @@ function App() {
         />
 
         {/* Private Routes */}
-        <Route
-          element={isLoggedIn ? <HomePage /> : <Navigate to="/sign-in" />}
-          path="/"
-        />
-        <Route
-          element={isLoggedIn ? <MessagesPage /> : <Navigate to="/sign-in" />}
-          path="/messages"
-        />
-        <Route
-          element={isLoggedIn ? <ProfilePage /> : <Navigate to="/sign-in" />}
-          path="/profile"
-        />
+        <Route path="/" element={<Layout />}>
+          <Route
+            element={isLoggedIn ? <HomePage /> : <Navigate to="/sign-in" />}
+            path="/"
+          />
+          <Route
+            element={isLoggedIn ? <SearchPage /> : <Navigate to="/sign-in" />}
+            path="/search"
+          />
+          <Route
+            element={isLoggedIn ? <MessagesPage /> : <Navigate to="/sign-in" />}
+            path="/messages"
+          />
+          <Route
+            element={isLoggedIn ? <CreatePost /> : <Navigate to="/sign-in" />}
+            path="/create"
+          />
+          <Route
+            element={isLoggedIn ? <ProfilePage /> : <Navigate to="/sign-in" />}
+            path="/profile"
+          />
+        </Route>
       </Routes>
     </>
   );

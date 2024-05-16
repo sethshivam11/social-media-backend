@@ -1,11 +1,11 @@
 import React from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Link } from "react-router-dom";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
 import bgDoodle from "/bg-doodle-2.jpg";
 import bgDarkDoodle from "/bg-doodle-white.jpg";
-import CheckboxWithLabel from "./CheckboxWithLabel";
+import CheckboxWithLabel from "../CheckboxWithLabel";
 import { useUser } from "@/context/UserProvider";
 import {
   Form,

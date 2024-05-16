@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
@@ -7,7 +7,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "./ui/card";
+} from "../ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -21,7 +21,7 @@ import { useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useUser } from "@/context/UserProvider";
 import { Loader2 } from "lucide-react";
-import { toast } from "./ui/use-toast";
+import { toast } from "../ui/use-toast";
 
 interface FormInput {
   code: string;
