@@ -1,5 +1,6 @@
 import { useUser } from "@/context/UserProvider";
 import RightNavbar from "../RightNavbar";
+import Post from "../Post";
 
 export default function Homepage() {
   const { user } = useUser();
@@ -48,16 +49,14 @@ export default function Homepage() {
     },
   ];
   return (
-    <>
-      <div className="animate-pulse md:text-5xl sm:text-4xl text-2xl grid place-items-center h-screen">
-        App is under development
+      <div className="hidden flex-row items-start justify-center w-full container lg:pr-80 h-[200vh]">
+        <Post />
+        <RightNavbar
+          avatar={user.avatar}
+          fullName={user.fullName}
+          username={user.username}
+          suggestions={suggestions}
+        />
       </div>
-      <RightNavbar
-        avatar={user.avatar}
-        fullName={user.fullName}
-        username={user.username}
-        suggestions={suggestions}
-      />
-    </>
   );
 }

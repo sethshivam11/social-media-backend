@@ -36,6 +36,18 @@ interface FollowUser {
   username: string;
 }
 
+interface Profile {
+  _id: string;
+  fullName: string;
+  username: string;
+  avatar: string;
+  bio: string;
+  followers: number;
+  following: number;
+  postsCount: number;
+  isBlueTick: boolean;
+}
+
 interface UserContext {
   user: UserInterface;
   loading: boolean;
@@ -44,6 +56,9 @@ interface UserContext {
   following: followUser[];
   setFollowers: Function;
   setFollowing: Function;
+  getProfile: Function;
+  profile: Profile;
+  setProfile: Function;
   fetchUser: Function;
   registerUser: Function;
   loginUser: Function;
@@ -83,6 +98,19 @@ const initialState = {
     isBlueTick: false,
     isMailVerified: false,
   },
+  profile: {
+    _id: "",
+    fullName: "",
+    username: "",
+    avatar: "",
+    bio: "",
+    followers: 0,
+    following: 0,
+    postsCount: 0,
+    isBlueTick: false,
+  },
+  setProfile: () => {},
+  getProfile: () => {},
   followers: [],
   following: [],
   setFollowers: () => {},
@@ -122,25 +150,13 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
     accessToken: "sociial-accessToken",
   };
 
-  const [user, setUser] = React.useState<UserInterface>({
-    fullName: "",
-    email: "",
-    username: "",
-    password: "",
-    avatar: "",
-    bio: "",
-    blocked: [],
-    followingCount: 0,
-    followersCount: 0,
-    postsCount: 0,
-    isBlueTick: false,
-    isMailVerified: false,
-  });
   const [page, setPage] = React.useState(1);
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [followers, setFollowers] = React.useState<FollowUser[]>([]);
   const [following, setFollowing] = React.useState<FollowUser[]>([]);
+  const [user, setUser] = React.useState<UserInterface>(initialState.user);
+  const [profile, setProfile] = React.useState<Profile>(initialState.profile);
 
   function fetchUser() {
     setLoading(true);
@@ -264,6 +280,9 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       .then((response) => {
         if (response.success) {
           setUser(initialState.user);
+          setIsLoggedIn(false);
+          localStorage.removeItem(storage.accessToken);
+          localStorage.removeItem(storage.refreshToken);
           toast({
             title: "Success",
             description: response.message,
@@ -273,9 +292,6 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       })
       .catch(async (err) => {
         console.error(err);
-        if (err.message === "Token expired!") {
-          await renewAccessToken();
-        }
         toast({
           title: "Error",
           description: err.message || "Something went wrong!",
@@ -698,9 +714,48 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       });
   }
 
+  function getProfile({
+    username,
+    userId,
+  }: {
+    username?: string;
+    userId?: string;
+  }) {
+    setLoading(true);
+    fetch(`/api/v1/users/getProfile/?username=${username}&userId=${userId}`)
+      .then((parsed) => parsed.json())
+      .then((response) => {
+        if (response.success) {
+          setProfile(response.data);
+        } else {
+          toast({
+            title: "Error",
+            description: response.message,
+          });
+        }
+      })
+      .catch(async (err) => {
+        console.error(err);
+        if (err.message === "Token expired!") {
+          await renewAccessToken();
+        }
+        toast({
+          title: "Error",
+          description: err.message || "Something went wrong!",
+        });
+      })
+      .finally(() => setLoading(false));
+  }
+
   React.useEffect(() => {
     if (localStorage.getItem(storage.accessToken)) {
       setIsLoggedIn(true);
+      window.document.cookie = `accessToken=${localStorage.getItem(
+        storage.accessToken
+      )};`;
+      document.cookie = `refreshToken=${localStorage.getItem(
+        storage.refreshToken
+      )};`;
       fetchUser();
     }
   }, []);
@@ -710,8 +765,11 @@ export default function UserProvider(props: React.PropsWithChildren<{}>) {
       value={{
         fetchUser,
         user,
+        profile,
+        setProfile,
         followers,
         following,
+        getProfile,
         setFollowers,
         setFollowing,
         loading,

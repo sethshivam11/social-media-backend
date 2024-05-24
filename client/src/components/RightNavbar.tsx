@@ -14,7 +14,7 @@ interface Props {
 
 const RightNavbar = ({ avatar, fullName, username, suggestions }: Props) => {
   return (
-    <ul className="fixed right-0 w-80 h-screen flex items-start justify-start flex-col px-8 py-4 gap-2 ring-1 ring-zinc-200 dark:ring-zinc-600">
+    <ul className="absolute right-0 w-96 top-0 h-screen flex min-[1200px] hidden max-[2000px] items-start justify-start flex-col px-16 py-6 gap-2">
       <li className="flex items-center justify-center gap-3">
         <img
           src={avatar.replace("upload", "upload/q_auto")}
@@ -27,10 +27,10 @@ const RightNavbar = ({ avatar, fullName, username, suggestions }: Props) => {
           <p className="text-gray-300 text-sm">{fullName}</p>
         </div>
       </li>
-      <li className="my-6 w-full flex justify-between">Suggestions for you</li>
+      <li className="mb-4 mt-2 w-full flex justify-between text-zinc-300">Suggestions for you</li>
       {suggestions.map(({ username, avatar, fullName }, index) => (
         <li key={index} className="flex items-center justify-between w-full">
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-3 text-sm">
             <img
               src={avatar.replace("upload", "upload/q_auto")}
               alt=""
@@ -48,7 +48,7 @@ const RightNavbar = ({ avatar, fullName, username, suggestions }: Props) => {
               </p>
             </div>
           </div>
-          <button className="text-blue-500">Follow</button>
+          <button className="text-blue-500 text-sm">Follow</button>
         </li>
       ))}
     </ul>

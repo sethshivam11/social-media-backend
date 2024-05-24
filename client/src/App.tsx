@@ -2,7 +2,7 @@ import "./App.css";
 import { Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./components/Pages/Homepage";
 import LoginPage from "./components/Pages/LoginPage";
-import Navbar from "./components/Navbar";
+import TopNavbar from "./components/TopNavbar";
 import MessagesPage from "./components/Pages/MessagesPage";
 import ProfilePage from "./components/Pages/ProfilePage";
 import SignupPage from "./components/Pages/SignupPage";
@@ -18,7 +18,7 @@ function App() {
   const { isLoggedIn } = useUser();
   return (
     <>
-      {!isLoggedIn && <Navbar />}
+      {!isLoggedIn && <TopNavbar />}
       <Toaster />
       <Routes>
         {/* Public Routes */}

@@ -17,6 +17,7 @@ import {
   removeAvatar,
   resendEmail,
   forgotPassword,
+  getProfile,
 } from "../controllers/user.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -38,9 +39,11 @@ router.route("/forgotPassword").post(forgotPassword);
 
 // Verified routes
 
+router.route("/getProfile").get(getProfile);
+
 router.route("/get").get(verifyJWT, getCurrentUser);
 
-router.route("/logout").post(verifyJWT, logoutUser);
+router.route("/logout").get(verifyJWT, logoutUser);
 
 router
   .route("/updateAvatar")

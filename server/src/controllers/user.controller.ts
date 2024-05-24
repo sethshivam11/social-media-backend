@@ -158,6 +158,33 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
+const getProfile = asyncHandler(async (req: Request, res: Response) => {
+  const { username, _id } = req.query;
+
+  if (!username || !(username instanceof String) || !username?.trim()) {
+    throw new ApiError(400, "Username is required");
+  }
+
+  const user = await User.findOne({ $or: [{ username }, { _id }] });
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const newUser = {
+    username: user.username,
+    fullName: user.fullName,
+    avatar: user.avatar,
+    bio: user.bio,
+    isBlueTick: user.isBlueTick,
+    followersCount: user.followersCount,
+    followingCount: user.followingCount,
+    postsCount: user.postsCount,
+  };
+
+  return res.status(200).json(new ApiResponse(200, newUser, "User found"));
+});
+
 const getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
@@ -266,6 +293,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
 
   user.refreshToken = "";
   await user.save({ validateBeforeSave: false });
+  res.clearCookie("accessToken").clearCookie("refreshToken");
 
   return res.status(200).json(new ApiResponse(200, {}, "User logged out"));
 });
@@ -568,6 +596,7 @@ export {
   forgotPassword,
   updatePassword,
   updateDetails,
+  getProfile,
   updateBlueTickStatus,
   blockUser,
   unblockUser,
