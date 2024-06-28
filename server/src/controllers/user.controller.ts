@@ -7,6 +7,7 @@ import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../constants";
 import sendEmail from "../helpers/mailer";
+import mongoose from "mongoose";
 
 export interface File {
   fieldname: string;
@@ -473,12 +474,16 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
   if (!user) {
     throw new ApiError(404, "User not found");
   }
+  const blockedUser = new mongoose.Schema.Types.ObjectId(blockUserId);
+  if(!blockedUser) {
+    throw new ApiError(404, "Blocked user not found");
+  }
 
-  if (user.blocked.includes(blockUserId)) {
+  if (user.blocked.includes(blockedUser)) {
     throw new ApiError(409, "User already blocked");
   }
 
-  user.blocked = [...user.blocked, blockUserId];
+  user.blocked = [...user.blocked, blockedUser];
   await user.save({ validateBeforeSave: false });
 
   const newUser = removeSensitiveData(user);

@@ -6,7 +6,7 @@ interface PostInterface extends Document {
   user: ObjectId;
   caption: string;
   media: string;
-  tags: string[];
+  tags: ObjectId[];
   likesCount: number;
   commentsCount: number;
   likePost(liker: ObjectId): Promise<PostInterface>;
@@ -23,6 +23,7 @@ const postSchema: Schema<PostInterface> = new Schema(
     },
     caption: {
       type: String,
+      trim: true,
     },
     media: {
       type: String,
@@ -93,4 +94,4 @@ postSchema.methods.dislikePost = async function (disliker: ObjectId) {
   return this;
 };
 
-export const Post = mongoose.model("post", postSchema);
+export const Post = mongoose.model<PostInterface>("post", postSchema);

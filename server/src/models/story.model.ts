@@ -5,60 +5,71 @@ interface media {
   caption: string;
 }
 
-interface StoryInterface {
+interface StoryInterface extends Document {
   user: ObjectId;
   media: media[];
   caption: string;
-  seenBy: string[];
-  tags: string[];
-  likes: string[];
-  blockedTo: string[];
+  seenBy: ObjectId[];
+  tags: ObjectId[];
+  likes: ObjectId[];
+  blockedTo: ObjectId[];
+  createdAt: Date;
 }
 
 function validateMinLength(array: string[]) {
   return array.length >= 1;
 }
 
-const storySchema: Schema<StoryInterface> = new Schema(
-  {
-    user: {
+const storySchema: Schema<StoryInterface> = new Schema({
+  user: {
+    type: Schema.Types.ObjectId,
+    required: true,
+    ref: "user",
+  },
+  media: {
+    type: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        caption: {
+          type: String,
+          trim: true,
+        },
+      },
+    ],
+    validate: [validateMinLength, "Minimum one file is required"],
+  },
+  tags: [
+    {
       type: Schema.Types.ObjectId,
       ref: "user",
     },
-    media: {
-      type: [
-        {
-          url: {
-            type: String,
-            required: true,
-          },
-          caption: {
-            type: String,
-            trim: true,
-          },
-        },
-      ],
-      validate: [validateMinLength, "Minimum one file is required"],
+  ],
+  likes: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "user",
     },
-    tags: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "user",
-      },
-    ],
-    likes: Array,
-    blockedTo: Array,
-    seenBy: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "user",
-      },
-    ],
+  ],
+  blockedTo: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "user",
+    },
+  ],
+  seenBy: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: "user",
+    },
+  ],
+  createdAt: {
+    type: Date,
+    expires: 86400,
+    default: Date.now,
   },
-  {
-    timestamps: true,
-    expireAfterSeconds: 86400,
-  }
-);
+});
 
 export const Story = mongoose.model<StoryInterface>("story", storySchema);

@@ -110,7 +110,7 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Message not found");
   }
 
-  message.reacts.forEach((react: { content: string; user: string }) => {
+  message.reacts.forEach((react: { content: string, user: mongoose.ObjectId}) => {
     if (react.user.toString() === _id.toString()) {
       throw new ApiError(400, "You already reacted to this message");
     }
@@ -153,7 +153,7 @@ const unreactMessage = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const exists = message.reacts.some(
-    (react: { user: string }) => react.user.toString() === _id.toString()
+    (react: { user: mongoose.ObjectId }) => react.user.toString() === _id.toString()
   );
   if (!exists) {
     throw new ApiError(400, "You already unreacted to this message");

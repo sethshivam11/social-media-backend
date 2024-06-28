@@ -7,6 +7,7 @@ import { File } from "./user.controller";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import { ChatEventEnum, DEFAULT_GROUP_ICON } from "../constants";
 import { emitSocketEvent } from "../socket";
+import mongoose from "mongoose";
 
 
 // limit number of chats for pagination
@@ -144,7 +145,8 @@ const addParticipants = asyncHandler(
             throw new ApiError(403, "You are not authorized to add participants")
         }
         participants.forEach((participant: string) => {
-            if (chat.users.includes(participant)) {
+            const participantId = new mongoose.Schema.Types.ObjectId(participant);
+            if (chat.users.includes(participantId)) {
                 throw new ApiError(400, "Some participants already exists")
             }
         })
@@ -153,9 +155,10 @@ const addParticipants = asyncHandler(
         await chat.save()
         const participantsInfo = await chat.getParticipantsInfo(participants)
 
-        chat.users.forEach((participant: String) => {
-            if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, avatar, username } })
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
+            if (participantId === _id.toString()) return;
+            emitSocketEvent(participantId, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, avatar, username } })
         })
 
         return res.status(200).json(
@@ -185,7 +188,8 @@ const removeParticipants = asyncHandler(
         }
 
         participants.forEach((participant: string) => {
-            if (!chat.users.includes(participant)) {
+            const participantId = new mongoose.Schema.Types.ObjectId(participant)
+            if (!chat.users.includes(participantId)) {
                 throw new ApiError(400, "Some participants are already not in group")
             }
         })
@@ -193,9 +197,10 @@ const removeParticipants = asyncHandler(
         await chat.updateOne({ $pull: { users: { $in: participants } } })
 
         const participantsInfo = await chat.getParticipantsInfo(participants)
-        chat.users.forEach((participant: String) => {
-            if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, avatar, username } })
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
+            if (participantId === _id.toString()) return;
+            emitSocketEvent(participantId, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, { participantsInfo, user: { fullName, avatar, username } })
         })
 
         return res.status(200).json(
@@ -240,9 +245,10 @@ const updateGroupDetails = asyncHandler(
         if (groupName) chat.groupName = groupName
         await chat.save()
 
-        chat.users.forEach((participant: String) => {
-            if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
+            if (participantId === _id.toString()) return;
+            emitSocketEvent(participantId, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
         })
 
         return res.status(200).json(
@@ -274,9 +280,10 @@ const deleteGroup = asyncHandler(
         if (chat.groupIcon !== DEFAULT_GROUP_ICON) await deleteFromCloudinary(chat.groupIcon as string)
         await chat.deleteOne()
 
-        chat.users.forEach((participant: String) => {
-            if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
+            if (participantId === _id.toString()) return;
+            emitSocketEvent(participantId, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
         })
 
         return res.status(200).json(
@@ -304,9 +311,10 @@ const leaveGroup = asyncHandler(
 
         await chat.updateOne({ $pull: { users: _id, admin: _id } })
 
-        chat.users.forEach((participant: String) => {
-            if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.GROUP_LEAVE_EVENT, { chat, user: { fullName, avatar, username } })
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
+            if (participantId === _id.toString()) return;
+            emitSocketEvent(participantId, ChatEventEnum.GROUP_LEAVE_EVENT, { chat, user: { fullName, avatar, username } })
         })
 
         return res.status(200).json(
@@ -348,9 +356,10 @@ const removeGroupIcon = asyncHandler(
         chat.groupIcon = DEFAULT_GROUP_ICON
         await chat.save()
 
-        chat.users.forEach((participant: String) => {
-            if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
+            if (participantId === _id.toString()) return;
+            emitSocketEvent(participantId, ChatEventEnum.GROUP_DETAILS_UPDATED, { chat, user: { fullName, avatar, username } })
         })
 
 
@@ -392,9 +401,10 @@ const makeAdmin = asyncHandler(
         await chat.save()
         const getUsersInParticipants = await chat.getParticipantsInfo([userId])
 
-        chat.users.forEach((participant: String) => {
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
             if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.NEW_ADMIN_EVENT, { admin: getUsersInParticipants, user: { fullName, avatar, username } })
+            emitSocketEvent(participantId, ChatEventEnum.NEW_ADMIN_EVENT, { admin: getUsersInParticipants, user: { fullName, avatar, username } })
         })
 
         return res.status(200).json(
@@ -434,9 +444,10 @@ const removeAdmin = asyncHandler(
         await chat.updateOne({ $pull: { admin: userId } }, { new: true })
 
         const getUsersInParticipants = await chat.getParticipantsInfo([userId])
-        chat.users.forEach((participant: String) => {
-            if (participant.toString() === _id.toString()) return;
-            emitSocketEvent(participant as string, ChatEventEnum.NEW_ADMIN_EVENT, { removed: getUsersInParticipants, user: { fullName, avatar, username } })
+        chat.users.forEach((participant) => {
+            const participantId = participant.toString();
+            if (participantId === _id.toString()) return;
+            emitSocketEvent(participantId, ChatEventEnum.NEW_ADMIN_EVENT, { removed: getUsersInParticipants, user: { fullName, avatar, username } })
         })
 
         return res.status(200).json(

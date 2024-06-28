@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, ObjectId } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../constants";
@@ -10,7 +10,7 @@ export interface UserInterface extends Document {
   email: string;
   password?: string;
   bio: string;
-  blocked: string[];
+  blocked: ObjectId[];
   followingCount: number;
   followersCount: number;
   postsCount: number;

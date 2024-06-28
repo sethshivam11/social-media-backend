@@ -1,14 +1,13 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, ObjectId } from "mongoose";
 import { User, UserInterface } from "./user.model";
 import { DEFAULT_GROUP_ICON } from "../constants";
 
 interface ChatInterface extends Document {
-  users: string[];
+  users: ObjectId[];
   isGroupChat: boolean;
-  admin: string[];
+  admin: ObjectId[];
   groupName: string;
   groupIcon: string;
-  lastMessage: string;
   getParticipantsInfo(participants: string[]): UserInterface;
 }
 
@@ -33,14 +32,11 @@ const chatSchema: Schema<ChatInterface> = new Schema(
     groupName: {
       type: String,
       default: "personal",
+      trim: true,
     },
     groupIcon: {
       type: String,
       default: DEFAULT_GROUP_ICON,
-    },
-    lastMessage: {
-      type: String,
-      trim: true,
     },
   },
   {
@@ -61,4 +57,4 @@ chatSchema.methods.getParticipantsInfo = (participants: string[]) => {
   );
 };
 
-export const Chat = mongoose.model("chat", chatSchema);
+export const Chat = mongoose.model<ChatInterface>("chat", chatSchema);

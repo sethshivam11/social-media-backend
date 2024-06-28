@@ -15,18 +15,19 @@ const followSchema: Schema<FollowInterface> = new Schema(
       type: Schema.Types.ObjectId,
       ref: "user",
       required: true,
-      index: true,
     },
     followers: [
       {
         type: Schema.Types.ObjectId,
         ref: "user",
+        required: true,
       },
     ],
     followings: [
       {
         type: Schema.Types.ObjectId,
         ref: "user",
+        required: true,
       },
     ],
   },
@@ -93,4 +94,4 @@ followSchema.methods.unfollow = async function (unfolloweeId: ObjectId) {
   );
 };
 
-export const Follow = mongoose.model("follow", followSchema);
+export const Follow = mongoose.model<FollowInterface>("follow", followSchema);

@@ -1,15 +1,18 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, ObjectId } from "mongoose";
 
 interface ReportInterface extends Document {
-  username: string;
+  username: ObjectId;
   message: string;
-  images: string[];
+  images?: string[];
 }
 
 const reportSchema: Schema<ReportInterface> = new Schema({
-  username: { type: String, required: true },
-  message: { type: String, required: true },
+  username: { type: Schema.Types.ObjectId, required: true },
+  message: { type: String, required: true, trim: true },
   images: [String],
 });
 
-export default mongoose.model<ReportInterface>("Report", reportSchema);
+export const ReportModel = mongoose.model<ReportInterface>(
+  "report",
+  reportSchema
+);

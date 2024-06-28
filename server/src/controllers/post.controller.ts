@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse";
 import { Post } from "../models/post.model";
 import { File } from "./user.controller";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
+import mongoose from "mongoose";
 
 const limit = 20;
 let pageNo = 1;
@@ -302,7 +303,7 @@ const addToTags = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, "Unauthorized request");
   }
 
-  tags.forEach((tag: string) => {
+  tags.forEach((tag: mongoose.ObjectId) => {
     if (post.tags.includes(tag)) {
       throw new ApiError(409, "Some users already tagged");
     }

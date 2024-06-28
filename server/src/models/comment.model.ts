@@ -23,6 +23,7 @@ const commentSchema: Schema<CommentInterface> = new Schema(
     content: {
       type: String,
       required: true,
+      trim: true,
     },
     likes: [
       {
@@ -54,4 +55,4 @@ commentSchema.methods.updateCommentsCount = async function (
   return this;
 };
 
-export const Comment = mongoose.model("comment", commentSchema);
+export const Comment = mongoose.model<CommentInterface>("comment", commentSchema);

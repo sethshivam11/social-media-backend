@@ -11,6 +11,7 @@ const likeSchema: Schema<LikeInterface> = new Schema(
     content: {
       type: String,
       default: "❤️",
+      trim: true,
     },
     user: {
       type: Schema.Types.ObjectId,
@@ -28,4 +29,4 @@ const likeSchema: Schema<LikeInterface> = new Schema(
   }
 );
 
-export const Like = mongoose.model("like", likeSchema);
+export const Like = mongoose.model<LikeInterface>("like", likeSchema);
