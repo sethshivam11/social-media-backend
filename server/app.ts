@@ -51,6 +51,13 @@ import messageRouter from "./src/routes/message.route";
 import storyRouter from "./src/routes/story.route";
 
 // Routes declarations
+app.use("/api/v1/users", userRouter);
+app.use("/api/v1/follow", followRouter);
+app.use("/api/v1/posts", postRouter);
+app.use("/api/v1/comments", commmentRouter);
+app.use("/api/v1/chats", chatRouter);
+app.use("/api/v1/messages", messageRouter);
+app.use("/api/v1/stories", storyRouter);
 app.get("/", (_: Request, res: Response) => {
   return res.json({
     success: true,
@@ -59,13 +66,6 @@ app.get("/", (_: Request, res: Response) => {
     message: "App is running",
   });
 });
-app.use("/api/v1/users", userRouter);
-app.use("/api/v1/follow", followRouter);
-app.use("/api/v1/posts", postRouter);
-app.use("/api/v1/comments", commmentRouter);
-app.use("/api/v1/chats", chatRouter);
-app.use("/api/v1/messages", messageRouter);
-app.use("/api/v1/stories", storyRouter);
 
 initializeSocket(io);
 
