@@ -6,6 +6,9 @@ import { Post } from "../models/post.model";
 import { File } from "./user.controller";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import mongoose from "mongoose";
+import { NotificationModel } from "../models/notification.model";
+import { NotificationPreferences } from "../models/notificationpreferences.model";
+import sendNotification from "../helpers/firebase";
 
 const limit = 20;
 let pageNo = 1;
@@ -17,9 +20,13 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
 
   const { _id } = req.user;
 
-  const { caption, tags } = req.body;
+  const { caption } = req.body;
 
   const mediaFilePath = (req.file as File)?.path;
+  const mediaFileKind = (req.file as File)?.mimetype;
+  if (!(mediaFileKind.includes("image") || mediaFileKind.includes("video"))) {
+    throw new ApiError(400, "Invalid media file type");
+  }
 
   if (!(mediaFilePath || caption)) {
     throw new ApiError(404, "Post image is required");
@@ -34,8 +41,8 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
   const post = await Post.create({
     user: _id,
     caption,
-    tags,
     media: media.secure_url,
+    kind: mediaFileKind.includes("video") ? "video" : "image",
   });
   await post.updatePostCount();
 
@@ -98,7 +105,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
     path: "user",
     model: "user",
     select:
-      "username fullName avatar followingCount followersCount postsCount isBlueTick",
+      "username fullName avatar followingCount followersCount postsCount",
     strictPopulate: false,
   });
 
@@ -231,7 +238,7 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, avatar } = req.user;
 
   const { postId } = req.params;
   if (!postId) {
@@ -246,6 +253,27 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
   const like = await post.likePost(_id);
   if (typeof like === "string") {
     throw new ApiError(409, like);
+  }
+  await NotificationModel.create({
+    title: `Post Liked`,
+    description: `${_id} liked you post`,
+    user: post.user,
+  });
+
+  const notificationPreference = await NotificationPreferences.findOne({
+    user: post.user,
+  });
+  if (
+    notificationPreference &&
+    notificationPreference.firebaseToken &&
+    notificationPreference.pushNotifications.likes
+  ) {
+    sendNotification({
+      title: "Post Liked",
+      body: `${_id} liked your post`,
+      token: notificationPreference.firebaseToken,
+      image: avatar,
+    });
   }
 
   return res
@@ -274,78 +302,22 @@ const dislikePost = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, dislike);
   }
 
+  await NotificationModel.findOneAndDelete({
+    title: "Post Liked",
+    user: post.user,
+  });
+
   return res
     .status(200)
     .json(new ApiResponse(200, post, "Post disliked successfully"));
 });
 
-const addToTags = asyncHandler(async (req: Request, res: Response) => {
+const morePosts = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
 
-  const { postId, tags } = req.body;
-  if (!postId || !tags) {
-    throw new ApiError(400, "Post id and tagged users is required");
-  }
-
-  if (!(tags instanceof Array)) {
-    throw new ApiError(400, "Tagged user must be an array");
-  }
-
-  const post = await Post.findById(postId);
-  if (!post) {
-    throw new ApiError(404, "Post not found");
-  }
-
-  if (post.user.toString() !== _id.toString()) {
-    throw new ApiError(403, "Unauthorized request");
-  }
-
-  tags.forEach((tag: mongoose.ObjectId) => {
-    if (post.tags.includes(tag)) {
-      throw new ApiError(409, "Some users already tagged");
-    }
-  });
-
-  post.tags = [...post.tags, ...tags];
-  await post.save();
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, post, "Users added to tags"));
-});
-
-const removeFromTags = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-  const { _id } = req.user;
-
-  const { postId, tags } = req.body;
-  if (!postId || !tags) {
-    throw new ApiError(400, "Post id and tagged user is required");
-  }
-
-  if (!(tags instanceof Array)) {
-    throw new ApiError(400, "Tagged user must be an array");
-  }
-
-  const post = await Post.findById(postId);
-  if (!post) {
-    throw new ApiError(404, "Post not found");
-  }
-
-  if (post.user.toString() !== _id.toString()) {
-    throw new ApiError(403, "Unauthorized request");
-  }
-
-  await post.updateOne({ $pull: { tags: { $in: tags } } }, { new: true });
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Users removed from tags"));
+  const { postId } = req.params;
 });
 
 export {
@@ -356,6 +328,4 @@ export {
   likePost,
   dislikePost,
   getPost,
-  addToTags,
-  removeFromTags,
 };

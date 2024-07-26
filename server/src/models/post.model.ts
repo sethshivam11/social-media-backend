@@ -6,7 +6,7 @@ interface PostInterface extends Document {
   user: ObjectId;
   caption: string;
   media: string;
-  tags: ObjectId[];
+  kind: string;
   likesCount: number;
   commentsCount: number;
   likePost(liker: ObjectId): Promise<PostInterface>;
@@ -29,12 +29,10 @@ const postSchema: Schema<PostInterface> = new Schema(
       type: String,
       required: true,
     },
-    tags: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "user",
-      },
-    ],
+    kind: {
+      type: String,
+      default: "image",
+    },
     likesCount: {
       type: Number,
       default: 0,

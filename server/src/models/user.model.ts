@@ -14,7 +14,6 @@ export interface UserInterface extends Document {
   followingCount: number;
   followersCount: number;
   postsCount: number;
-  isBlueTick: boolean;
   isMailVerified: boolean;
   refreshToken?: string;
   verifyCode: string;
@@ -67,10 +66,6 @@ const userSchema: Schema<UserInterface> = new Schema(
     postsCount: {
       type: Number,
       default: 0,
-    },
-    isBlueTick: {
-      type: Boolean,
-      default: false,
     },
     isMailVerified: {
       type: Boolean,

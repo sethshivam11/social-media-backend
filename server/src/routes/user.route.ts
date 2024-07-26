@@ -7,7 +7,6 @@ import {
   verifyEmail,
   updateAvatar,
   updateDetails,
-  updateBlueTickStatus,
   blockUser,
   unblockUser,
   renewAccessToken,
@@ -55,12 +54,12 @@ router.route("/updateDetails").put(verifyJWT, updateDetails);
 
 router.route("/changePassword").patch(verifyJWT, updatePassword);
 
-router.route("/updateBlue").get(verifyJWT, updateBlueTickStatus);
-
 router.route("/block/:blockUserId").get(verifyJWT, blockUser);
 
 router.route("/unblock/:unblockUserId").get(verifyJWT, unblockUser);
 
 router.route("/renewAccessToken").post(renewAccessToken);
+
+router.route("/search").get(verifyJWT, getCurrentUser);
 
 export default router;

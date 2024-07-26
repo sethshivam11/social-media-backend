@@ -177,7 +177,6 @@ const getProfile = asyncHandler(async (req: Request, res: Response) => {
     fullName: user.fullName,
     avatar: user.avatar,
     bio: user.bio,
-    isBlueTick: user.isBlueTick,
     followersCount: user.followersCount,
     followingCount: user.followingCount,
     postsCount: user.postsCount,
@@ -435,30 +434,6 @@ const updateDetails = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, newUser, "User details updated"));
 });
 
-const updateBlueTickStatus = asyncHandler(
-  async (req: Request, res: Response) => {
-    if (!req.user) {
-      throw new ApiError(401, "User not verified");
-    }
-    const { _id } = req.user;
-
-    const user = await User.findById(_id);
-    if (!user) {
-      throw new ApiError(404, "User not found");
-    }
-
-    user.isBlueTick = true;
-
-    await user.save({ validateBeforeSave: false });
-
-    const newUser = removeSensitiveData(user);
-
-    return res
-      .status(200)
-      .json(new ApiResponse(200, newUser, "User's blue tick updated"));
-  }
-);
-
 const blockUser = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
@@ -475,7 +450,7 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
   const blockedUser = new mongoose.Schema.Types.ObjectId(blockUserId);
-  if(!blockedUser) {
+  if (!blockedUser) {
     throw new ApiError(404, "Blocked user not found");
   }
 
@@ -590,6 +565,33 @@ const isUsernameAvailable = asyncHandler(
   }
 );
 
+const searchUsers = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id, blocked } = req.user;
+  const { username, fullName } = req.query;
+  if (!(username || fullName)) {
+    throw new ApiError(400, "Query is required");
+  }
+
+  const user = User.find(
+    {
+      $or: [
+        { $regex: username, $options: "i" },
+        { $regex: fullName, $options: "i" },
+      ],
+      $nin: [_id, ...(blocked || [])],
+    },
+    "username fullName avatar"
+  );
+  if (!user) {
+    throw new ApiError(404, "No users found");
+  }
+
+  return res.status(200).json(new ApiResponse(200, user, "Users found"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -602,10 +604,10 @@ export {
   updatePassword,
   updateDetails,
   getProfile,
-  updateBlueTickStatus,
   blockUser,
   unblockUser,
   renewAccessToken,
   isUsernameAvailable,
   resendEmail,
+  searchUsers,
 };

@@ -180,7 +180,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
 }
 ```
 
-
 ### Login a user
 
     /v1/users/login
@@ -849,7 +848,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
   "data": {
     "user": "SOME_USER_ID",
     "media": "SOME_MEDIA_LINK",
-    "tags": [],
     "likesCount": 0,
     "commentsCount": 0,
     "_id": "SOME_POST_ID",
@@ -908,7 +906,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
         "postsCount": 1
       },
       "media": "SOME_MEDIA_LINK",
-      "tags": [],
       "reactsCount": 0,
       "commentsCount": 0,
       "createdAt": "2024-02-17T06:12:01.914Z",
@@ -920,7 +917,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
       "_id": "SOME_POST_ID",
       "user": "SOME_USER_ID",
       "media": "SOME_MEDIA_LINK",
-      "tags": [],
       "reactsCount": 0,
       "commentsCount": 0,
       "createdAt": "2024-02-17T06:10:42.316Z",
@@ -972,7 +968,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
       "postsCount": 1
     },
     "media": "SOME_MEDIA_LINK",
-    "tags": [],
     "reactsCount": 0,
     "commentsCount": 0,
     "createdAt": "2024-02-17T06:12:01.914Z",
@@ -1020,7 +1015,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
         "fullName": "Full Name",
       },
       "media": "SOME_MEDIA_LINK",
-      "tags": [],
       "commentsCount": 0,
       "createdAt": "2024-02-17T06:10:42.316Z",
       "updatedAt": "2024-02-17T06:10:42.316Z",
@@ -1063,7 +1057,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
     "_id": "SOME_POST_ID",
     "user": "SOME_USER_ID",
     "media": "SOME_MEDIA_LINK",
-    "tags": [],
     "commentsCount": 0,
     "createdAt": "2024-02-17T06:10:42.316Z",
     "updatedAt": "2024-02-17T06:10:42.316Z",
@@ -1105,7 +1098,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
     "_id": "SOME_POST_ID",
     "user": "SOME_USER_ID",
     "media": "SOME_MEDIA_LINK",
-    "tags": [],
     "commentsCount": 0,
     "createdAt": "2024-02-17T06:10:42.316Z",
     "updatedAt": "2024-02-17T06:10:42.316Z",
@@ -1113,83 +1105,6 @@ username must contain letters, numbers, underscores('\_') and dots('.')
     "likesCount": 0
   },
   "message": "Post disliked successfully",
-  "success": true
-}
-```
-
-### Add to tags
-
-    /v1/posts/addTags
-
-> **_PUT_**
-
-**Request Headers** ->
-
-- Required fields
-  `Authorization`
-
-- Example value
-  `Authorization: Bearer YOUR_BEARER_TOKEN`
-
-**Request Body** ->
-
-- Required fields
-  `postId` `tags`
-
-##### Example response
-
----
-
-```JSON
-{
-  "statusCode": 200,
-  "data": {
-    "_id": "SOME_POST_ID",
-    "user": "SOME_USER_ID",
-    "caption": "SOME_CAPTION",
-    "media": "SOME_MEDIA_LINK",
-    "tags": [
-      "ANOTHER_USER_ID"
-    ],
-    "likesCount": 0,
-    "commentsCount": 0,
-    "createdAt": "2024-02-22T15:07:58.339Z",
-    "updatedAt": "2024-02-25T17:50:39.526Z",
-    "__v": 2
-  },
-  "message": "Users added to tags",
-  "success": true
-}
-```
-
-### Remove from tags
-
-    /v1/posts/removeTags
-
-> **_PUT_**
-
-**Request Headers** ->
-
-- Required fields
-  `Authorization`
-
-- Example value
-  `Authorization: Bearer YOUR_BEARER_TOKEN`
-
-**Request Body** ->
-
-- Required fields
-  `postId` `tags`
-
-##### Example response
-
----
-
-```JSON
-{
-  "statusCode": 200,
-  "data": {},
-  "message": "Users removed from tags",
   "success": true
 }
 ```

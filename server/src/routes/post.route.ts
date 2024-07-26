@@ -1,15 +1,21 @@
 import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
-import { addToTags, createFeed, createPost, deletePost, dislikePost, getPost, getUserPosts, likePost, removeFromTags } from "../controllers/post.controller";
+import {
+  createFeed,
+  createPost,
+  deletePost,
+  dislikePost,
+  getPost,
+  getUserPosts,
+  likePost,
+} from "../controllers/post.controller";
 import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 
 router.use(verifyJWT);
 
-router.route("/new").post(
-    upload.single("media"),
-    createPost);
+router.route("/new").post(upload.single("media"), createPost);
 
 router.route("/user/:userId").get(getUserPosts);
 
@@ -22,9 +28,5 @@ router.route("/like/:postId").get(likePost);
 router.route("/dislike/:postId").get(dislikePost);
 
 router.route("/delete/:postId").delete(deletePost);
-
-router.route("/addTags").put(addToTags);
-
-router.route("/removeTags").put(removeFromTags);
 
 export default router;

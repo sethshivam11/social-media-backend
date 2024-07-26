@@ -5,6 +5,9 @@ import { Request, Response } from "express";
 import { Story } from "../models/story.model";
 import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import { File } from "./user.controller";
+import { NotificationModel } from "../models/notification.model";
+import sendNotification from "../helpers/firebase";
+import { NotificationPreferences } from "../models/notificationpreferences.model";
 
 const createStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -164,7 +167,7 @@ const likeStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, avatar } = req.user;
   const { storyId } = req.params;
 
   const story = await Story.findById(storyId);
@@ -178,6 +181,28 @@ const likeStory = asyncHandler(async (req: Request, res: Response) => {
 
   await story.updateOne({ $push: { likes: _id } }, { new: true });
   story.likes = [...story.likes, _id];
+
+  await NotificationModel.create({
+    title: `Story Liked`,
+    description: `${_id} liked your story`,
+    user: story.user,
+  });
+
+  const notificationPreference = await NotificationPreferences.findOne({
+    user: story.user,
+  });
+  if (
+    notificationPreference &&
+    notificationPreference.firebaseToken &&
+    notificationPreference.pushNotifications.storyLikes
+  ) {
+    sendNotification({
+      title: "Story Liked`,",
+      body: `${_id} liked your story`,
+      token: notificationPreference.firebaseToken,
+      image: avatar,
+    });
+  }
 
   return res.status(200).json(new ApiResponse(200, story, "Story liked"));
 });
@@ -199,6 +224,10 @@ const unlikeStory = asyncHandler(async (req: Request, res: Response) => {
   }
 
   await story.updateOne({ $pull: { likes: _id } }, { new: true });
+  await NotificationModel.create({
+    title: `Story Liked`,
+    user: story.user,
+  });
 
   return res.status(200).json(new ApiResponse(200, {}, "Story unliked"));
 });

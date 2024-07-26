@@ -27,6 +27,7 @@ dist-ssr
 node_modules
 dist
 nodemon.json
+firebase-admin.json
 
 
 

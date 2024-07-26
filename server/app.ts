@@ -49,6 +49,9 @@ import commmentRouter from "./src/routes/comment.route";
 import chatRouter from "./src/routes/chat.route";
 import messageRouter from "./src/routes/message.route";
 import storyRouter from "./src/routes/story.route";
+import reportRouter from "./src/routes/report.route";
+import notificationRouter from "./src/routes/notification.route";
+import notificationPreferenceRouter from "./src/routes/notificationpreferences.route";
 
 // Routes declarations
 app.use("/api/v1/users", userRouter);
@@ -58,6 +61,9 @@ app.use("/api/v1/comments", commmentRouter);
 app.use("/api/v1/chats", chatRouter);
 app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/stories", storyRouter);
+app.use("/api/v1/report", reportRouter);
+app.use("/api/v1/notification", notificationRouter);
+app.use("/api/v1/notificationPreferences", notificationPreferenceRouter);
 app.get("/", (_: Request, res: Response) => {
   return res.json({
     success: true,

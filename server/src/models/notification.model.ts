@@ -5,7 +5,6 @@ export interface NotificationInterface extends Document {
   description: string;
   user: ObjectId;
   read: boolean;
-  type: string;
   link: string;
 }
 
@@ -30,10 +29,6 @@ const NotificationSchema: Schema<NotificationInterface> = new Schema(
       type: Boolean,
       default: false,
     },
-    type: {
-      type: String,
-      default: "info",
-    },
     link: {
       type: String,
     },
@@ -43,4 +38,4 @@ const NotificationSchema: Schema<NotificationInterface> = new Schema(
   }
 );
 
-export const Notification = mongoose.model<NotificationInterface>("notification", NotificationSchema);
+export const NotificationModel = mongoose.model<NotificationInterface>("notification", NotificationSchema);

@@ -4,6 +4,9 @@ import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/AsyncHandler";
 import { Request, Response } from "express";
+import { NotificationModel } from "../models/notification.model";
+import { NotificationPreferences } from "../models/notificationpreferences.model";
+import sendNotification from "../helpers/firebase";
 
 // limit number of followers for pagination
 const limit = 20;
@@ -13,7 +16,7 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(400, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, username } = req.user;
 
   const { followee } = req.params;
   if (!followee) {
@@ -37,6 +40,26 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
       );
     }
     await newFollow.follow(followeeId);
+    await NotificationModel.create({
+      title: `New Follower`,
+      description: `${username} started following you`,
+      user: followeeId,
+    });
+
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: followeeId,
+    });
+    if (
+      notificationPreference &&
+      notificationPreference.firebaseToken &&
+      notificationPreference.pushNotifications.newFollowers
+    ) {
+      sendNotification({
+        title: "New Follower",
+        body: `${username} started following you`,
+        token: notificationPreference.firebaseToken,
+      });
+    }
 
     return res
       .status(200)
@@ -60,7 +83,7 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(400, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, username } = req.user;
 
   const { unfollowee } = req.params;
   if (!unfollowee) {
@@ -81,6 +104,10 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
   await follow
     .updateOne({ $pull: { followings: unfollowee } }, { new: true })
     .then(async () => await follow.unfollow(unfolloweeId));
+  await NotificationModel.findOneAndDelete({
+    user: unfolloweeId,
+    title: `New Follower`,
+  });
 
   return res.status(200).json(new ApiResponse(200, {}, "Unfollowed user"));
 });

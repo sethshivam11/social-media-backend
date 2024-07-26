@@ -4,9 +4,9 @@ interface MessageInterface extends Document {
   sender: ObjectId;
   chat: ObjectId;
   content: string;
-  viewOnce: boolean;
+  kind?: "message" | "location" | "media" | "audio" | "document";
   reacts: { content: string; user: ObjectId }[];
-  attachments: string[];
+  attachment: string;
   readBy: ObjectId[];
 }
 
@@ -24,10 +24,13 @@ const messageSchema: Schema<MessageInterface> = new Schema(
     },
     content: {
       type: String,
-      required: true,
       trim: true,
     },
-    attachments: [String],
+    kind: {
+      type: String,
+      default: "message",
+    },
+    attachment: String,
     reacts: [
       {
         content: {
@@ -55,4 +58,7 @@ const messageSchema: Schema<MessageInterface> = new Schema(
   }
 );
 
-export const Message = mongoose.model<MessageInterface>("message", messageSchema);
+export const Message = mongoose.model<MessageInterface>(
+  "message",
+  messageSchema
+);
