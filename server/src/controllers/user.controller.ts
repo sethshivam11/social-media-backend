@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../constants";
 import sendEmail from "../helpers/mailer";
 import mongoose from "mongoose";
+import { Follow } from "../models/follow.model";
 
 export interface File {
   fieldname: string;
@@ -221,7 +222,9 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   userWithCode.isMailVerified = true;
   await userWithCode.save({ validateBeforeSave: false });
 
-  return res.status(200).json(new ApiResponse(200, {}, "User verified"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { isMailVerified: true }, "User verified"));
 });
 
 const resendEmail = asyncHandler(async (req: Request, res: Response) => {
@@ -364,9 +367,11 @@ const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Something went wrong, while updating avatar");
   }
 
-  const newUser = removeSensitiveData(user);
-
-  return res.status(200).json(new ApiResponse(200, newUser, "Avatar updated"));
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, { avatar: avatar.secure_url }, "Avatar updated")
+    );
 });
 
 const removeAvatar = asyncHandler(async (req: Request, res: Response) => {
@@ -386,9 +391,54 @@ const removeAvatar = asyncHandler(async (req: Request, res: Response) => {
   user.avatar = DEFAULT_USER_AVATAR;
   await user.save({ validateBeforeSave: false });
 
-  const newUser = removeSensitiveData(user);
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, { avatar: DEFAULT_USER_AVATAR }, "Avatar removed")
+    );
+});
 
-  return res.status(200).json(new ApiResponse(200, newUser, "Avatar removed"));
+const updateEmail = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+
+  const { _id } = req.user;
+  const { email, code } = req.body;
+
+  if (!email) {
+    throw new ApiError(400, "Email is required");
+  }
+
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const existedUser = await User.findOne({ email });
+  if (existedUser) {
+    throw new ApiError(409, "Email already exists");
+  }
+
+  const isCodeInvalid = user.verifyCode === code;
+  const isCodeExpired = new Date(user.verifyCodeExpiry) > new Date();
+
+  if (!isCodeInvalid) {
+    throw new ApiError(401, "Invalid code");
+  }
+  if (!isCodeExpired) {
+    throw new ApiError(401, "Code has expired, Please request a new one");
+  }
+
+  user.email = email;
+  user.isMailVerified = true;
+  user.verifyCode = "";
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { email }, "Email updated, verification sent"));
 });
 
 const updateDetails = asyncHandler(async (req: Request, res: Response) => {
@@ -397,7 +447,7 @@ const updateDetails = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const { _id } = req.user;
-  const { fullName, email, username, bio } = req.body;
+  const { fullName, username, bio } = req.body;
 
   const user = await User.findById(_id);
   if (!user) {
@@ -406,16 +456,6 @@ const updateDetails = asyncHandler(async (req: Request, res: Response) => {
 
   if (!(bio === undefined)) user.bio = bio;
   if (fullName) user.fullName = fullName;
-
-  if (email) {
-    const checkEmail = await User.findOne({ email });
-
-    if (checkEmail) {
-      throw new ApiError(409, "User with this email already exists");
-    }
-    user.email = email;
-  }
-
   if (username) {
     const checkUserName = await User.findOne({ username });
 
@@ -456,6 +496,21 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
 
   if (user.blocked.includes(blockedUser)) {
     throw new ApiError(409, "User already blocked");
+  }
+
+  const follow = await Follow.findOne({ user: _id });
+  if (!follow) {
+    throw new ApiError(400, "Something went wrong, while blocking the user");
+  }
+
+  const { followers, followings } = follow;
+  if (followers.includes(blockedUser)) {
+    followers.filter((follower) => follower !== blockedUser);
+    user.followersCount -= 1;
+  }
+  if (followings.includes(blockedUser)) {
+    followings.filter((following) => following !== blockedUser);
+    user.followingCount -= 1;
   }
 
   user.blocked = [...user.blocked, blockedUser];
@@ -602,6 +657,7 @@ export {
   removeAvatar,
   forgotPassword,
   updatePassword,
+  updateEmail,
   updateDetails,
   getProfile,
   blockUser,

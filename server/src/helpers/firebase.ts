@@ -7,7 +7,7 @@ interface PushNotification {
   image?: string;
 }
 
-const serviceAccount = require("../../../firebase-admin.json");
+const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN || "{}");
 
 const firebaseAdmin = admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -25,7 +25,7 @@ const sendNotification = async ({
       notification: {
         title,
         body,
-        imageUrl: process.env.ICON_URL || image
+        imageUrl: process.env.ICON_URL || image,
       },
     });
   } catch (error) {

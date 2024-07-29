@@ -36,30 +36,32 @@ router.route("/resendMail").get(resendEmail);
 
 router.route("/forgotPassword").post(forgotPassword);
 
+router.route("/renewAccessToken").post(renewAccessToken);
+
 // Verified routes
+
+router.use(verifyJWT);
 
 router.route("/getProfile").get(getProfile);
 
-router.route("/get").get(verifyJWT, getCurrentUser);
+router.route("/get").get(getCurrentUser);
 
-router.route("/logout").get(verifyJWT, logoutUser);
+router.route("/logout").get(logoutUser);
 
-router
-  .route("/updateAvatar")
-  .patch(verifyJWT, upload.single("avatar"), updateAvatar);
+router.route("/updateAvatar").patch(upload.single("avatar"), updateAvatar);
 
-router.route("/removeAvatar").get(verifyJWT, removeAvatar);
+router.route("/removeAvatar").get(removeAvatar);
 
-router.route("/updateDetails").put(verifyJWT, updateDetails);
+router.route("/updateDetails").put(updateDetails);
 
-router.route("/changePassword").patch(verifyJWT, updatePassword);
+router.route("/updatePassword").patch(updatePassword);
 
-router.route("/block/:blockUserId").get(verifyJWT, blockUser);
+router.route("/changePassword").patch(updatePassword);
 
-router.route("/unblock/:unblockUserId").get(verifyJWT, unblockUser);
+router.route("/block/:blockUserId").get(blockUser);
 
-router.route("/renewAccessToken").post(renewAccessToken);
+router.route("/unblock/:unblockUserId").get(unblockUser);
 
-router.route("/search").get(verifyJWT, getCurrentUser);
+router.route("/search").get(getCurrentUser);
 
 export default router;

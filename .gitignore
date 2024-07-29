@@ -27,9 +27,9 @@ dist-ssr
 node_modules
 dist
 nodemon.json
+
+# Firebase config
 firebase-admin.json
-
-
 
 # Env files
 .env

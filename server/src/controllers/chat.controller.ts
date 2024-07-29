@@ -33,7 +33,6 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
     isGroupChat: false,
   });
   if (chatExists) {
-    console.log(chatExists, username, fullName);
     throw new ApiError(400, "Chat already exists");
   }
 
@@ -132,14 +131,17 @@ const getChats = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, blocked } = req.user;
   const { page } = req.query;
 
   if (page) {
     pageNo = parseInt(page as string);
   }
 
-  const chats = await Chat.find({ users: _id })
+  const chats = await Chat.find({
+    users: { $in: [_id], $nin: [blocked] },
+    isGroupChat: true,
+  })
     .populate({
       path: "users",
       select: "name username avatar",

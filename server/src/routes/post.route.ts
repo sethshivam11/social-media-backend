@@ -15,7 +15,7 @@ const router = Router();
 
 router.use(verifyJWT);
 
-router.route("/new").post(upload.single("media"), createPost);
+router.route("/new").post(upload.array("media"), createPost);
 
 router.route("/user/:userId").get(getUserPosts);
 

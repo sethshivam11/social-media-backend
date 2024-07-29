@@ -20,29 +20,64 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
 
   const { _id } = req.user;
 
-  const { caption } = req.body;
+  const { caption, kind } = req.body;
 
-  const mediaFilePath = (req.file as File)?.path;
-  const mediaFileKind = (req.file as File)?.mimetype;
-  if (!(mediaFileKind.includes("image") || mediaFileKind.includes("video"))) {
-    throw new ApiError(400, "Invalid media file type");
+  const mediaFiles = req.files as File[];
+  if (!mediaFiles || !mediaFiles.length) {
+    throw new ApiError(404, "Post image or video is required");
+  }
+  let media: string[] = [];
+
+  if (kind === "video") {
+    if (!mediaFiles[0].mimetype.includes("video")) {
+      throw new ApiError(400, "Invalid media file type");
+    }
+
+    const upload = await uploadToCloudinary(mediaFiles[0].path);
+    if (upload && upload.secure_url) media.push(upload.secure_url);
+
+    if (!media || !media.length) {
+      throw new ApiError(
+        400,
+        "Something went wrong, while uploading post media"
+      );
+    }
+
+    const post = await Post.create({
+      user: _id,
+      caption,
+      media,
+      kind: "video",
+    });
+    await post.updatePostCount();
+
+    if (!post) {
+      throw new ApiError(400, "Something went wrong, while posting");
+    }
+
+    return res
+      .status(201)
+      .json(new ApiResponse(200, post, "Post created successfully"));
   }
 
-  if (!(mediaFilePath || caption)) {
-    throw new ApiError(404, "Post image is required");
-  }
+  await Promise.all(
+    mediaFiles.map(async (file) => {
+      if (file.mimetype.includes("image")) {
+        const upload = await uploadToCloudinary(file.path);
+        if (upload && upload.secure_url) media.push(upload.secure_url);
+      }
+    })
+  );
 
-  const media = await uploadToCloudinary(mediaFilePath);
-
-  if (!media) {
+  if (!media || !media.length) {
     throw new ApiError(400, "Something went wrong, while uploading post media");
   }
 
   const post = await Post.create({
     user: _id,
     caption,
-    media: media.secure_url,
-    kind: mediaFileKind.includes("video") ? "video" : "image",
+    media,
+    kind: "image",
   });
   await post.updatePostCount();
 
@@ -104,8 +139,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
   const firstPost = await Post.findOne({ user: userId }).populate({
     path: "user",
     model: "user",
-    select:
-      "username fullName avatar followingCount followersCount postsCount",
+    select: "username fullName avatar followingCount followersCount postsCount",
     strictPopulate: false,
   });
 
@@ -144,24 +178,31 @@ const getPost = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const post = await Post.findById(postId)
-    .populate({
-      model: "user",
-      path: "user",
-      select:
-        "username avatar fullName followersCount followingCount postsCount",
-      strictPopulate: false,
-    })
-    .limit(limit)
-    .skip((pageNo - 1) * 20);
+  const post = await Post.findById(postId).populate({
+    model: "user",
+    path: "user",
+    select: "username avatar fullName followersCount followingCount postsCount",
+    strictPopulate: false,
+  });
 
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
 
+  const relatedPosts = await Post.find({
+    user: post?.user,
+    _id: { $nin: [post._id] },
+  }).limit(6);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, post, "Post retrieved successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { post, relatedPosts },
+        "Post retrieved successfully"
+      )
+    );
 });
 
 const createFeed = asyncHandler(async (req: Request, res: Response) => {
@@ -310,14 +351,6 @@ const dislikePost = asyncHandler(async (req: Request, res: Response) => {
   return res
     .status(200)
     .json(new ApiResponse(200, post, "Post disliked successfully"));
-});
-
-const morePosts = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-
-  const { postId } = req.params;
 });
 
 export {

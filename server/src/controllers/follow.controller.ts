@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Follow, FollowInterface } from "../models/follow.model";
+import { Follow } from "../models/follow.model";
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/AsyncHandler";
@@ -24,7 +24,7 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const followeeId = new mongoose.Schema.Types.ObjectId(followee);
-  const follow: FollowInterface | null = await Follow.findOne({ user: _id });
+  const follow = await Follow.findOne({ user: _id });
 
   // Create new follow if null
   if (!follow) {
@@ -91,7 +91,7 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const unfolloweeId = new mongoose.Schema.Types.ObjectId(unfollowee);
-  const follow: FollowInterface | null = await Follow.findOne({ user: _id });
+  const follow = await Follow.findOne({ user: _id });
 
   if (!follow) {
     throw new ApiError(404, "Follow not found");
@@ -126,7 +126,7 @@ const getFollowers = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const follow: FollowInterface | null = await Follow.findOne({ user: _id })
+  const follow = await Follow.findOne({ user: _id })
     .populate({
       path: "followers",
       select: "fullName username avatar",
@@ -159,7 +159,7 @@ const getFollowing = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const follow: FollowInterface | null = await Follow.findOne({ user: _id })
+  const follow = await Follow.findOne({ user: _id })
     .populate({
       path: "followings",
       select: "fullName username avatar",
@@ -184,10 +184,10 @@ const getSuggestions = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const { all } = req.query;
-  const { _id } = req.user;
+  const { _id, blocked } = req.user;
 
   const user = await Follow.find({
-    user: { $nin: [_id] },
+    user: { $nin: [_id, ...blocked] },
     $limit: all ? 30 : 5,
   }).populate({
     path: "user",

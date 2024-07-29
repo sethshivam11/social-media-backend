@@ -17,10 +17,11 @@ const sendEmail = async function (
   username: string
 ) {
   try {
-    const updatedHtml = Email.replace(
-      "https://sociial.onrender.com/verify",
-      `https://sociial.onrender.com/verify?code=${code}&username=${username}`
-    ).replace("$%code%$", `${code}`);
+    const updatedHtml = Email(
+      code,
+      username,
+      process.env.PUBLIC_URL || "https://sociial.vercel.app"
+    );
 
     await transporter.sendMail({
       from: process.env.MAIL_USER,

@@ -1,4 +1,5 @@
-export const Email = `<html
+export function Email(code: number, username: string, publicLink: string) {
+  return `<html
 lang="en"
 xmlns:o="urn:schemas-microsoft-com:office:office"
 xmlns:v="urn:schemas-microsoft-com:vml"
@@ -372,7 +373,7 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                               <td class="pad">
                                 <div align="center" class="alignment">
                                   <a
-                                    href="https://sociial.onrender.com/verify"
+                                    href="${publicLink}/verify?code=${code}&username=${username}"
                                     style="
                                       text-decoration: none;
                                       display: block;
@@ -408,7 +409,7 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                                           word-break: break-word;
                                           line-height: 40px;
                                         "
-                                        >$%code%$</span
+                                        >${code}</span
                                       ></span
                                     ></a
                                   >
@@ -440,3 +441,4 @@ xmlns:v="urn:schemas-microsoft-com:vml"
 </body>
 </html>
 `;
+}
