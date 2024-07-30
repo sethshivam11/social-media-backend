@@ -3,12 +3,17 @@ import { ApiResponse } from "../utils/ApiResponse";
 import { User, UserInterface } from "../models/user.model";
 import { Request, Response } from "express";
 import { asyncHandler } from "../utils/AsyncHandler";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
+import {
+  cleanupFiles,
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary";
 import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../constants";
 import sendEmail from "../helpers/mailer";
 import mongoose from "mongoose";
 import { Follow } from "../models/follow.model";
+import { NotificationPreferences } from "../models/notificationpreferences.model";
 
 export interface File {
   fieldname: string;
@@ -66,6 +71,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
   const { fullName, username, email, password } = req.body;
 
   if (!(fullName || username || email || password)) {
+    cleanupFiles();
     throw new ApiError(400, "All fields are required");
   }
 
@@ -74,6 +80,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
   });
 
   if (existedUser && existedUser.isMailVerified) {
+    cleanupFiles();
     throw new ApiError(409, "Username or email already exists");
   }
 
@@ -294,6 +301,14 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
+  const notificationPreference = await NotificationPreferences.findOne({
+    user: _id,
+  });
+  if (notificationPreference) {
+    notificationPreference.firebaseToken = null;
+    await notificationPreference.save();
+  }
+
   user.refreshToken = "";
   await user.save({ validateBeforeSave: false });
   res.clearCookie("accessToken").clearCookie("refreshToken");
@@ -454,7 +469,7 @@ const updateDetails = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
-  if (!(bio === undefined)) user.bio = bio;
+  if (bio !== undefined) user.bio = bio;
   if (fullName) user.fullName = fullName;
   if (username) {
     const checkUserName = await User.findOne({ username });
@@ -503,14 +518,19 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Something went wrong, while blocking the user");
   }
 
-  const { followers, followings } = follow;
-  if (followers.includes(blockedUser)) {
-    followers.filter((follower) => follower !== blockedUser);
+  if (follow.followers.includes(blockedUser)) {
+    follow.followers = follow.followers.filter(
+      (follower) => follower !== blockedUser
+    );
     user.followersCount -= 1;
+    await follow.save();
   }
-  if (followings.includes(blockedUser)) {
-    followings.filter((following) => following !== blockedUser);
+  if (follow.followings.includes(blockedUser)) {
+    follow.followings = follow.followings.filter(
+      (following) => following !== blockedUser
+    );
     user.followingCount -= 1;
+    await follow.save();
   }
 
   user.blocked = [...user.blocked, blockedUser];
@@ -548,7 +568,13 @@ const unblockUser = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, newUser, "User was unblocked"));
+    .json(
+      new ApiResponse(
+        200,
+        { user: newUser, unblockUserId },
+        "User was unblocked"
+      )
+    );
 });
 
 const renewAccessToken = asyncHandler(async (req: Request, res: Response) => {

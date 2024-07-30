@@ -3,7 +3,11 @@ import { ApiError } from "../utils/ApiError";
 import { asyncHandler } from "../utils/AsyncHandler";
 import { Message } from "../models/message.model";
 import { File } from "./user.controller";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
+import {
+  cleanupFiles,
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary";
 import { ApiResponse } from "../utils/ApiResponse";
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
@@ -20,6 +24,7 @@ const fetchUsersInChat = (chatId: mongoose.ObjectId) => Chat.findById(chatId);
 
 const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
+    cleanupFiles();
     throw new ApiError(401, "User not verified");
   }
   const { _id, username, avatar } = req.user;
@@ -28,6 +33,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   const { message, chatId, kind } = req.body;
 
   if (!(message || attachmentsLocalPath) || !chatId) {
+    cleanupFiles();
     throw new ApiError(400, "Message and chatId is required");
   }
 

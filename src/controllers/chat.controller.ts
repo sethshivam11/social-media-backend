@@ -4,7 +4,11 @@ import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/AsyncHandler";
 import { File } from "./user.controller";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
+import {
+  cleanupFiles,
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary";
 import { ChatEventEnum, DEFAULT_GROUP_ICON } from "../constants";
 import { emitSocketEvent } from "../socket";
 import mongoose from "mongoose";
@@ -62,10 +66,12 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
 
   const { participants, groupName, admin } = req.body;
   if (!participants || !groupName) {
+    cleanupFiles();
     throw new ApiError(400, "participants and groupName are required");
   }
 
   if (!(participants instanceof Array)) {
+    cleanupFiles();
     throw new ApiError(400, "Participants must be an array");
   }
 
@@ -74,6 +80,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   if (groupIconLocalPath) {
     const groupIconData = await uploadToCloudinary(groupIconLocalPath);
     if (!groupIconData) {
+      cleanupFiles();
       throw new ApiError(
         500,
         "Something went wrong while uploading group icon"
@@ -298,21 +305,25 @@ const updateGroupDetails = asyncHandler(async (req: Request, res: Response) => {
   const groupIconLocalPath = (req.file as File)?.path;
 
   if (!chatId || !(groupIconLocalPath || groupName)) {
+    cleanupFiles();
     throw new ApiError(400, "chatId or groupImage is required");
   }
 
   const chat = await Chat.findById(chatId);
   if (!chat) {
+    cleanupFiles();
     throw new ApiError(404, "Chat not found");
   }
 
   if (!chat.admin.includes(_id)) {
+    cleanupFiles();
     throw new ApiError(403, "You are not authorized to update group icon");
   }
 
   if (groupIconLocalPath) {
     const groupIcon = await uploadToCloudinary(groupIconLocalPath);
     if (!groupIcon) {
+      cleanupFiles();
       throw new ApiError(
         500,
         "Something went wrong while uploading group icon"

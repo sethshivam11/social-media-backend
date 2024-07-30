@@ -3,7 +3,11 @@ import { ApiResponse } from "../utils/ApiResponse";
 import { ApiError } from "../utils/ApiError";
 import { Request, Response } from "express";
 import { Story } from "../models/story.model";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
+import {
+  cleanupFiles,
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary";
 import { File } from "./user.controller";
 import { NotificationModel } from "../models/notification.model";
 import sendNotification from "../helpers/firebase";
@@ -11,25 +15,34 @@ import { NotificationPreferences } from "../models/notificationpreferences.model
 
 const createStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
+    cleanupFiles();
     throw new ApiError(401, "User not verified");
   }
   const { _id, blocked } = req.user;
   const { captions, tags } = req.body;
 
   if (!req.files || req.files.length === 0) {
+    cleanupFiles();
     throw new ApiError(400, "Atleast one media file is required");
   }
 
-  let media = [];
-  const files: File[] = req.files as File[];
-  const saveToCloudinary = await Promise.all(
-    files.map(async (file: File) => uploadToCloudinary(file.path, true))
-  );
+  const prevStories = await Story.find({ user: _id });
+  const maxStories = prevStories.length + (req.files.length as number);
+  if (maxStories > 5) {
+    cleanupFiles();
+    throw new ApiError(400, "Only 5 stories in a day is allowed");
+  }
 
-  media = saveToCloudinary.map((file, index) => {
-    if (!file?.secure_url) return { url: "", caption: "" };
-    return { url: file?.secure_url, caption: captions ? captions[index] : "" };
-  });
+  let media: string[] = [];
+  const files: File[] = req.files as File[];
+  await Promise.all(
+    files.map(async (file) => {
+      if (file.mimetype.includes("image")) {
+        const upload = await uploadToCloudinary(file.path);
+        if (upload && upload.secure_url) media.push(upload.secure_url);
+      }
+    })
+  );
 
   if (media.length === 0) {
     throw new ApiError(400, "Something went wrong, while uploading story");
@@ -106,9 +119,9 @@ const getUserStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { storyId } = req.params;
+  const { username } = req.params;
 
-  const stories = await Story.find({ user: storyId });
+  const stories = await Story.find({ $populate: "user", username });
   if (!stories || stories.length === 0) {
     throw new ApiError(404, "No stories found");
   }
@@ -131,10 +144,9 @@ const deleteStory = asyncHandler(async (req: Request, res: Response) => {
   if (story.user.toString() !== _id.toString()) {
     throw new ApiError(401, "User not authorized");
   }
-  const mediaFiles: string[] = story.media.map((media) => media.url);
 
   await Promise.all(
-    mediaFiles.map(async (link: string) => deleteFromCloudinary(link))
+    story.media.map(async (link: string) => deleteFromCloudinary(link))
   );
   await story.deleteOne();
 

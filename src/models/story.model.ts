@@ -1,23 +1,12 @@
 import mongoose, { ObjectId, Schema } from "mongoose";
 
-interface media {
-  url: string;
-  caption: string;
-}
-
 interface StoryInterface extends Document {
   user: ObjectId;
-  media: media[];
-  caption: string;
+  media: string[];
   seenBy: ObjectId[];
-  tags: ObjectId[];
   likes: ObjectId[];
   blockedTo: ObjectId[];
   createdAt: Date;
-}
-
-function validateMinLength(array: string[]) {
-  return array.length >= 1;
 }
 
 const storySchema: Schema<StoryInterface> = new Schema({
@@ -27,26 +16,9 @@ const storySchema: Schema<StoryInterface> = new Schema({
     ref: "user",
   },
   media: {
-    type: [
-      {
-        url: {
-          type: String,
-          required: true,
-        },
-        caption: {
-          type: String,
-          trim: true,
-        },
-      },
-    ],
-    validate: [validateMinLength, "Minimum one file is required"],
+    type: [String],
+    minlength: 1
   },
-  tags: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: "user",
-    },
-  ],
   likes: [
     {
       type: Schema.Types.ObjectId,

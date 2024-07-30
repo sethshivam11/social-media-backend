@@ -21,6 +21,8 @@ const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
     if (!decodedToken?._id) {
       throw new ApiError(401, "Invalid token");
     }
+    console.log(decodedToken)
+    decodedToken.exp
 
     const user = await User.findById(decodedToken._id);
 
@@ -36,10 +38,8 @@ const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
 
     next();
   } catch (error) {
-    let message = "Something went wrong while verifying the user";
-
     if (error instanceof jwt.TokenExpiredError) {
-      message = "Token expired!";
+      error.message = "Token expired!";
     }
 
     next(error);

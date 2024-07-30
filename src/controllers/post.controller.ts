@@ -4,8 +4,7 @@ import { Request, Response } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
 import { Post } from "../models/post.model";
 import { File } from "./user.controller";
-import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
-import mongoose from "mongoose";
+import { cleanupFiles, deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import { NotificationModel } from "../models/notification.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import sendNotification from "../helpers/firebase";
@@ -15,21 +14,24 @@ let pageNo = 1;
 
 const createPost = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
+    cleanupFiles();
     throw new ApiError(401, "User not verified");
   }
-
+  
   const { _id } = req.user;
-
+  
   const { caption, kind } = req.body;
-
+  
   const mediaFiles = req.files as File[];
   if (!mediaFiles || !mediaFiles.length) {
+    cleanupFiles();
     throw new ApiError(404, "Post image or video is required");
   }
   let media: string[] = [];
-
+  
   if (kind === "video") {
     if (!mediaFiles[0].mimetype.includes("video")) {
+      cleanupFiles();
       throw new ApiError(400, "Invalid media file type");
     }
 
@@ -70,6 +72,7 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
   );
 
   if (!media || !media.length) {
+    cleanupFiles();
     throw new ApiError(400, "Something went wrong, while uploading post media");
   }
 
