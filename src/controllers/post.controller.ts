@@ -4,7 +4,11 @@ import { Request, Response } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
 import { Post } from "../models/post.model";
 import { File } from "./user.controller";
-import { cleanupFiles, deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
+import {
+  cleanupFiles,
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary";
 import { NotificationModel } from "../models/notification.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import sendNotification from "../helpers/firebase";
@@ -12,23 +16,61 @@ import sendNotification from "../helpers/firebase";
 const limit = 20;
 let pageNo = 1;
 
+async function getFollowings(userId: string) {
+  //  Get users that the logged in user is following
+  const follow = await Post.aggregate([
+    {
+      $lookup: {
+        from: "follows",
+        localField: "user",
+        foreignField: "user",
+        as: "follow",
+      },
+    },
+    {
+      $match: {
+        $expr: {
+          $eq: ["$user", userId],
+        },
+      },
+    },
+    {
+      $unwind: "$follow",
+    },
+    {
+      $project: {
+        follow: 1,
+      },
+    },
+    {
+      $limit: 1,
+    },
+  ]);
+
+  if (follow.length === 0 || follow[0].follow.followings.length === 0) {
+    return [];
+  }
+
+  return follow[0].follow.followings;
+}
+
 const createPost = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     cleanupFiles();
     throw new ApiError(401, "User not verified");
   }
-  
+
   const { _id } = req.user;
-  
+
   const { caption, kind } = req.body;
-  
+
   const mediaFiles = req.files as File[];
   if (!mediaFiles || !mediaFiles.length) {
     cleanupFiles();
     throw new ApiError(404, "Post image or video is required");
   }
   let media: string[] = [];
-  
+
   if (kind === "video") {
     if (!mediaFiles[0].mimetype.includes("video")) {
       cleanupFiles();
@@ -222,43 +264,15 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  //  Get users that the logged in user is following
-  const follow = await Post.aggregate([
-    {
-      $lookup: {
-        from: "follows",
-        localField: "user",
-        foreignField: "user",
-        as: "follow",
-      },
-    },
-    {
-      $match: {
-        $expr: {
-          $eq: ["$user", _id],
-        },
-      },
-    },
-    {
-      $unwind: "$follow",
-    },
-    {
-      $project: {
-        follow: 1,
-      },
-    },
-    {
-      $limit: 1,
-    },
-  ]);
+  const followings = await getFollowings(_id);
 
-  if (follow.length === 0 || follow[0].follow.followings.length === 0) {
-    throw new ApiError(404, "No posts found");
-  }
+  const totalCount = await Post.countDocuments({
+    user: { $in: followings, $nin: blocked },
+  });
 
   // Get posts of the users that the logged in user is following
   const posts = await Post.find({
-    user: { $in: follow[0]?.follow?.followings, $nin: blocked },
+    user: { $in: followings, $nin: blocked },
   })
     .populate({
       model: "user",
@@ -275,7 +289,60 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, posts, "Posts retrieved successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { posts, max: totalCount },
+        "Posts retrieved successfully"
+      )
+    );
+});
+
+const explorePosts = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+
+  const { _id, blocked } = req.user;
+  const { page } = req.query;
+  const followings = await getFollowings(_id);
+
+  if (page) {
+    pageNo = parseInt(page as string);
+    if (pageNo <= 0) {
+      pageNo = 1;
+    }
+  }
+
+  const totalCount = await Post.countDocuments({
+    user: { $nin: [...followings, ...blocked] },
+  });
+
+  const posts = await Post.find({
+    user: { $nin: [...followings, ...blocked] },
+  })
+    .populate({
+      model: "user",
+      path: "user",
+      select: "user fullName avatar",
+      strictPopulate: false,
+    })
+    .limit(pageNo)
+    .skip((pageNo - 1) * limit);
+
+  if (!posts || posts.length === 0) {
+    throw new ApiError(404, "No posts found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { posts, max: totalCount },
+        "Posts retrieved successfully"
+      )
+    );
 });
 
 const likePost = asyncHandler(async (req: Request, res: Response) => {
@@ -364,4 +431,5 @@ export {
   likePost,
   dislikePost,
   getPost,
+  explorePosts
 };

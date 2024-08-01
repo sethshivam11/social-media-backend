@@ -4,9 +4,12 @@ interface MessageInterface extends Document {
   sender: ObjectId;
   chat: ObjectId;
   content: string;
-  kind?: "message" | "location" | "media" | "audio" | "document";
+  kind?: "message" | "location" | "call" | "media" | "audio" | "document";
   reacts: { content: string; user: ObjectId }[];
-  attachment: string;
+  attachments: {
+    url: string;
+    type: "image" | "video" | "audio" | "document";
+  }[];
   readBy: ObjectId[];
 }
 
@@ -26,11 +29,12 @@ const messageSchema: Schema<MessageInterface> = new Schema(
       type: String,
       trim: true,
     },
-    kind: {
-      type: String,
-      default: "message",
-    },
-    attachment: String,
+    attachments: [
+      {
+        url: String,
+        type: String,
+      },
+    ],
     reacts: [
       {
         content: {

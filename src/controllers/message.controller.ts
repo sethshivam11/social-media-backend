@@ -29,7 +29,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, username, avatar } = req.user;
 
-  const attachmentsLocalPath = (req.file as File)?.path;
+  const attachmentsLocalPath = req.files as File[];
   const { message, chatId, kind } = req.body;
 
   if (!(message || attachmentsLocalPath) || !chatId) {
@@ -37,18 +37,49 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Message and chatId is required");
   }
 
-  let attachment = "";
-  if (attachmentsLocalPath) {
-    const uploadObject = await uploadToCloudinary(attachmentsLocalPath);
-    attachment = uploadObject?.url || "";
-  }
+  let attachments: {
+    url: string;
+    type: "image" | "video" | "audio" | "document";
+  }[] = [];
+  await Promise.all(
+    attachmentsLocalPath.map(async (localPath) => {
+      const upload = await uploadToCloudinary(localPath.path);
+      if (upload && upload.secure_url)
+        switch (localPath.mimetype.split("/")[0]) {
+          case "image":
+            attachments.push({
+              url: upload.secure_url,
+              type: "image",
+            });
+            break;
+          case "video":
+            attachments.push({
+              url: upload.secure_url,
+              type: "video",
+            });
+            break;
+          case "audio":
+            attachments.push({
+              url: upload.secure_url,
+              type: "audio",
+            });
+            break;
+          default:
+            attachments.push({
+              url: upload.secure_url,
+              type: "document",
+            });
+            break;
+        }
+    })
+  );
 
   const msg = await Message.create({
     content: message,
     chat: chatId,
     sender: _id,
     kind,
-    attachment,
+    attachments,
   });
 
   if (!msg) {
@@ -195,7 +226,9 @@ const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
   if (message.sender.toString() !== _id.toString()) {
     throw new ApiError(403, "You can't delete this message");
   }
-  await deleteFromCloudinary(message.attachment);
+  await Promise.all(
+    message.attachments.map((file) => deleteFromCloudinary(file.url))
+  );
 
   await message.deleteOne();
 

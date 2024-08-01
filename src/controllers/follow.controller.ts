@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Follow } from "../models/follow.model";
+import { Follow, FollowInterface } from "../models/follow.model";
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 import { asyncHandler } from "../utils/AsyncHandler";
@@ -7,10 +7,15 @@ import { Request, Response } from "express";
 import { NotificationModel } from "../models/notification.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import sendNotification from "../helpers/firebase";
+import { User } from "../models/user.model";
 
 // limit number of followers for pagination
 const limit = 20;
 let pageNo = 1;
+
+interface FollowWithMax extends FollowInterface {
+  max: number;
+}
 
 const follow = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -23,7 +28,14 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Followee is required");
   }
 
-  const followeeId = new mongoose.Schema.Types.ObjectId(followee);
+  const followeeDetails = await User.findById(followee).select(
+    "fullName username avatar"
+  );
+  if (!followeeDetails) {
+    throw new ApiError(404, "Something went wrong, while following");
+  }
+
+  const followeeId = followeeDetails._id;
   const follow = await Follow.findOne({ user: _id });
 
   // Create new follow if null
@@ -63,7 +75,7 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
 
     return res
       .status(200)
-      .json(new ApiResponse(200, newFollow, "Followed user"));
+      .json(new ApiResponse(200, { follow: followeeDetails }, "Followed user"));
   }
 
   // Update follow if found
@@ -75,7 +87,9 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
 
     await follow.save().then(async () => await follow.follow(followeeId));
 
-    return res.status(200).json(new ApiResponse(200, follow, "Followed user"));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { follow: followeeDetails }, "Followed user"));
   }
 });
 
@@ -83,14 +97,21 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(400, "User not verified");
   }
-  const { _id, username } = req.user;
+  const { _id } = req.user;
 
   const { unfollowee } = req.params;
   if (!unfollowee) {
     throw new ApiError(400, "Unfollowee is required");
   }
 
-  const unfolloweeId = new mongoose.Schema.Types.ObjectId(unfollowee);
+  const unfolloweeDetails = await User.findById(unfollowee).select(
+    "fullName username avatar"
+  );
+  if (!unfolloweeDetails) {
+    throw new ApiError(404, "Something went wrong, while unfollowing");
+  }
+
+  const unfolloweeId = unfolloweeDetails._id;
   const follow = await Follow.findOne({ user: _id });
 
   if (!follow) {
@@ -109,7 +130,11 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
     title: `New Follower`,
   });
 
-  return res.status(200).json(new ApiResponse(200, {}, "Unfollowed user"));
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, { unfollow: unfolloweeDetails }, "Unfollowed user")
+    );
 });
 
 const getFollowers = asyncHandler(async (req: Request, res: Response) => {
@@ -126,7 +151,10 @@ const getFollowers = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const follow = await Follow.findOne({ user: _id })
+  const follow = await Follow.findOne<FollowWithMax>(
+    { user: _id },
+    { max: { $size: "$followers" } }
+  )
     .populate({
       path: "followers",
       select: "fullName username avatar",
@@ -142,7 +170,13 @@ const getFollowers = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, follow.followers, "Followers found"));
+    .json(
+      new ApiResponse(
+        200,
+        { followers: follow.followers, max: follow.max },
+        "Followers found"
+      )
+    );
 });
 
 const getFollowing = asyncHandler(async (req: Request, res: Response) => {
@@ -159,7 +193,10 @@ const getFollowing = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const follow = await Follow.findOne({ user: _id })
+  const follow = await Follow.findOne<FollowWithMax>(
+    { user: _id },
+    { max: { $size: "$followings" } }
+  )
     .populate({
       path: "followings",
       select: "fullName username avatar",
@@ -175,7 +212,13 @@ const getFollowing = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, follow.followings, "Followings found"));
+    .json(
+      new ApiResponse(
+        200,
+        { followings: follow.followings, max: follow.max },
+        "Followings found"
+      )
+    );
 });
 
 const getSuggestions = asyncHandler(async (req: Request, res: Response) => {
