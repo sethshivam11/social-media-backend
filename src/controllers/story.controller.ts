@@ -19,15 +19,15 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
   const { _id, blocked } = req.user;
-  const { captions, tags } = req.body;
 
   if (!req.files || req.files.length === 0) {
-    cleanupFiles();
-    throw new ApiError(400, "Atleast one media file is required");
+    throw new ApiError(400, "Atleast one story is required");
   }
 
-  const prevStories = await Story.find({ user: _id });
-  const maxStories = prevStories.length + (req.files.length as number);
+  const prevStories = await Story.findOne({ user: _id });
+
+  const maxStories =
+    prevStories?.media.length || 0 + (req.files.length as number);
   if (maxStories > 5) {
     cleanupFiles();
     throw new ApiError(400, "Only 5 stories in a day is allowed");
@@ -48,10 +48,18 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Something went wrong, while uploading story");
   }
 
+  if (prevStories && prevStories.media.length > 0) {
+    prevStories.media.concat(media);
+    await prevStories.save();
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, prevStories, "Story uploaded"));
+  }
+
   const story = await Story.create({
     user: _id,
     media,
-    tags,
     blockedTo: blocked,
   });
 
@@ -107,7 +115,14 @@ const getStories = asyncHandler(async (req: Request, res: Response) => {
       $nin: blocked,
     },
     blockedTo: { $nin: [_id] },
-  });
+  })
+    .select("-blockedTo -seenBy -likes")
+    .populate({
+      model: "user",
+      path: "user",
+      select: "username fullName avatar",
+      strictPopulate: false,
+    });
   if (!stories || stories.length === 0) {
     throw new ApiError(404, "No stories found");
   }
@@ -121,8 +136,11 @@ const getUserStory = asyncHandler(async (req: Request, res: Response) => {
   }
   const { username } = req.params;
 
-  const stories = await Story.find({ $populate: "user", username });
-  if (!stories || stories.length === 0) {
+  const stories = await Story.findOne({
+    $populate: "likes seenBy",
+    username,
+  }).select("-blockedTo");
+  if (!stories) {
     throw new ApiError(404, "No stories found");
   }
 

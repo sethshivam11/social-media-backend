@@ -12,7 +12,7 @@ router.route("/saveToken").post(verifyJWT, saveFirebaseToken);
 
 router
   .route("/updatePreferences")
-  .patch(verifyJWT, updateNotificationPreferences);
+  .put(verifyJWT, updateNotificationPreferences);
 
 router.route("/get").get(verifyJWT, getNotificationPreferences);
 

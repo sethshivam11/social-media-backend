@@ -161,7 +161,7 @@ const deletePost = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Post deleted successfully"));
+    .json(new ApiResponse(200, post, "Post deleted successfully"));
 });
 
 const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
@@ -196,7 +196,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
   const restPosts = await Post.find({ user: userId })
     .sort({ createdAt: -1 })
     .limit(limit)
-    .skip(pageNo === 1 ? 1 : (pageNo - 1) * 20);
+    .skip(pageNo === 1 ? 1 : (pageNo - 1) * limit);
 
   const posts = [firstPost, ...(restPosts || [])];
 

@@ -132,16 +132,33 @@ const updateNotificationPreferences = asyncHandler(
 
     await savedNotificationPreferences.save();
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          {},
-          "Push notification preferences updated successfully"
-        )
-      );
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          pushNotifications: {
+            likes,
+            comments,
+            commentLikes,
+            storyLikes,
+            newFollowers,
+            newMessages,
+            newGroups,
+          },
+          emails: {
+            newProducts,
+            announcements,
+            support,
+          },
+        },
+        "Push notification preferences updated successfully"
+      )
+    );
   }
 );
 
-export { saveFirebaseToken, getNotificationPreferences, updateNotificationPreferences };
+export {
+  saveFirebaseToken,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+};

@@ -3,7 +3,6 @@ import { asyncHandler } from "../utils/AsyncHandler";
 import { ApiError } from "../utils/ApiError";
 import { Comment } from "../models/comment.model";
 import { ApiResponse } from "../utils/ApiResponse";
-import { User } from "../models/user.model";
 import { NotificationModel } from "../models/notification.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import sendNotification from "../helpers/firebase";
@@ -71,27 +70,6 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
     link: `/posts/${postId}`,
     type: "comment",
   });
-
-  if (comment.includes("@")) {
-    const mentionedUsers = comment.match(/@(\w+)/g);
-    if (mentionedUsers) {
-      mentionedUsers.forEach(async (user: string) => {
-        const usernameMentioned = user.replace("@", "");
-        const mentionedUser = await User.findOne({
-          username: usernameMentioned,
-        });
-        if (mentionedUser) {
-          await NotificationModel.create({
-            title: "Mention in Comment",
-            description: `${username} mentioned you in a comment`,
-            user: mentionedUser._id,
-            link: `/posts/${postId}`,
-            type: "comment",
-          });
-        }
-      });
-    }
-  }
 
   const newComment = await Comment.create({
     post: postId,

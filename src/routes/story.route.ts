@@ -15,9 +15,9 @@ const router = Router();
 
 router.use(verifyJWT);
 
-router.route("/getStories").get(getStories);
+router.route("/").get(getStories);
 
-router.route("/getStory/:storyId").get(getUserStory);
+router.route("/:storyId").get(getUserStory);
 
 router.route("/seen/:storyId").patch(seenStory);
 

@@ -98,7 +98,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const verifyCode = Math.floor(Math.random() * 900000);
+  const verifyCode =  Math.floor(100000 + Math.random() * 900000);
   const verifyCodeExpiry = Date.now() + 600_000;
 
   const user = await User.create({
@@ -245,7 +245,7 @@ const resendEmail = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Please check username or sign up again");
   }
 
-  const verifyCode = Math.floor(Math.random() * 900000);
+  const verifyCode = Math.floor(100000 + Math.random() * 900000);
   const verifyCodeExpiry = Date.now() + 600_000;
 
   user.verifyCode = `${verifyCode}`;
@@ -262,7 +262,7 @@ const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
   const { email, username, code, password } = req.body;
 
   if (!(email || username) || !code || !password) {
-    throw new ApiError(400, "Email or username is required");
+    throw new ApiError(400, "All fields are required");
   }
 
   const user = await User.findOne({ $or: [{ email }, { username }] });

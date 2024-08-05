@@ -27,13 +27,13 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const { _id, fullName, username, avatar } = req.user;
-  const { receiverId } = req.params;
-  if (!receiverId) {
-    throw new ApiError(400, "receiverId is required");
+  const { userId } = req.body;
+  if (!userId) {
+    throw new ApiError(400, "User is required");
   }
 
   const chatExists = await Chat.findOne({
-    users: { $all: [_id, receiverId] },
+    users: { $all: [_id, userId] },
     isGroupChat: false,
   });
   if (chatExists) {
@@ -41,13 +41,13 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const chat = await Chat.create({
-    users: [_id, receiverId],
+    users: [_id, userId],
   });
 
   if (!chat) {
     throw new ApiError(400, "Something went wrong, while creating chat");
   }
-  emitSocketEvent(receiverId, ChatEventEnum.NEW_CHAT_EVENT, {
+  emitSocketEvent(userId, ChatEventEnum.NEW_CHAT_EVENT, {
     fullName,
     username,
     avatar,
@@ -64,7 +64,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, fullName, username, avatar } = req.user;
 
-  const { participants, groupName, admin } = req.body;
+  const { participants, groupName } = req.body;
   if (!participants || !groupName) {
     cleanupFiles();
     throw new ApiError(400, "participants and groupName are required");
@@ -93,7 +93,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
     users: [...participants, _id],
     groupName,
     groupIcon,
-    admin: [...(admin || []), _id],
+    admin: [_id],
     isGroupChat: true,
   });
 
@@ -533,7 +533,7 @@ const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (!chat.admin.includes(_id)) {
-    throw new ApiError(403, "You are not authorized to make admin");
+    throw new ApiError(403, "You are not authorized to remove admin");
   }
 
   if (!chat.users.includes(userId)) {
@@ -558,32 +558,7 @@ const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, chat, "Admin added successfully"));
-});
-
-const searchChats = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-
-  const { _id } = req.user;
-  const { query } = req.query;
-  if (!query) {
-    throw new ApiError(400, "query is required");
-  }
-
-  const chats = await Chat.find({
-    users: _id,
-    groupName: { $regex: query, $options: "i" },
-  });
-
-  if (!chats) {
-    throw new ApiError(404, "No chats found");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, chats, "Chats fetched successfully"));
+    .json(new ApiResponse(200, chat, "Admin removed successfully"));
 });
 
 export {
@@ -598,5 +573,4 @@ export {
   removeGroupIcon,
   makeAdmin,
   removeAdmin,
-  searchChats,
 };

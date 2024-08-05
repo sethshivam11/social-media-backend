@@ -6,7 +6,7 @@ const router = Router()
 
 router.use(verifyJWT)
 
-router.route("/get/:postId").get(getAllComments)
+router.route("/:postId").get(getAllComments)
 
 router.route("/new").post(createComment)
 

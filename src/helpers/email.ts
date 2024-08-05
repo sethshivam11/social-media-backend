@@ -372,6 +372,15 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                             <tr>
                               <td class="pad">
                                 <div align="center" class="alignment">
+                                <p
+                                    style="
+                                      font-family: sans-serif;
+                                      font-size: 0.8rem;
+                                      color: grey;
+                                    "
+                                  >
+                                    This code is valid for 5 minutes.
+                                  </p>
                                   <a
                                     href="${publicLink}/verify?code=${code}&username=${username}"
                                     style="

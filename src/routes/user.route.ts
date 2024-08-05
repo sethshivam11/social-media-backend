@@ -56,8 +56,6 @@ router.route("/updateDetails").put(updateDetails);
 
 router.route("/updatePassword").patch(updatePassword);
 
-router.route("/changePassword").patch(updatePassword);
-
 router.route("/block/:blockUserId").get(blockUser);
 
 router.route("/unblock/:unblockUserId").get(unblockUser);
