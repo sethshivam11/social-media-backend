@@ -10,7 +10,10 @@ interface MessageInterface extends Document {
     url: string;
     type: "image" | "video" | "audio" | "document";
   }[];
-  readBy: ObjectId[];
+  reply?: {
+    username: string;
+    content: string;
+  };
 }
 
 const messageSchema: Schema<MessageInterface> = new Schema(
@@ -47,13 +50,6 @@ const messageSchema: Schema<MessageInterface> = new Schema(
           ref: "user",
           required: true,
         },
-      },
-    ],
-    readBy: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "user",
-        required: true,
       },
     ],
   },

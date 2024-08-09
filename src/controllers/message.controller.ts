@@ -170,7 +170,7 @@ const unreactMessage = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, fullName, avatar, username } = req.user;
 
-  const { messageId } = req.params;
+  const { messageId } = req.body;
   if (!messageId) {
     throw new ApiError(400, "Message is required");
   }
@@ -264,7 +264,7 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const messages = await Message.find({ chat: chatId })
-    .populate("sender", "username avatar")
+    .populate("sender reacts", "username fullName avatar")
     .sort({ createdAt: -1 })
     .limit(limit)
     .skip((pageNo - 1) * limit);
@@ -315,46 +315,6 @@ const editMessageContent = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json(new ApiResponse(200, message, "Message edited"));
 });
 
-const getReactions = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-
-  const { messageId } = req.params;
-  const { page } = req.query;
-  if (!messageId) {
-    throw new ApiError(400, "Message is required");
-  }
-
-  if (page) {
-    pageNo = parseInt(page as string);
-    if (pageNo <= 0) {
-      pageNo = 1;
-    }
-  }
-
-  const message = await Message.findById(messageId)
-    .populate({
-      path: "reacts",
-      select: "content",
-      populate: {
-        path: "user",
-        select: "username avatar",
-      },
-      strictPopulate: false,
-    })
-    .limit(limit)
-    .skip((pageNo - 1) * limit);
-
-  if (!message) {
-    throw new ApiError(404, "Message not found");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, message.reacts, "Reactions fetched"));
-});
-
 export {
   sendMessage,
   reactMessage,
@@ -362,5 +322,4 @@ export {
   deleteMessage,
   getMessages,
   editMessageContent,
-  getReactions,
 };
