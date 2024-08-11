@@ -15,11 +15,6 @@ import mongoose from "mongoose";
 import { NotificationModel } from "../models/notification.model";
 import sendNotification from "../helpers/firebase";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
-import { Message } from "../models/message.model";
-
-// limit number of chats for pagination
-const limit = 20;
-let pageNo = 1;
 
 const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -139,52 +134,37 @@ const getChats = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
   const { _id, blocked } = req.user;
-  const { page } = req.query;
 
-  if (page) {
-    pageNo = parseInt(page as string);
-  }
-
-  const chats = await Chat.find({
+  const privateChats = await Chat.find({
     users: { $in: [_id], $nin: [blocked] },
+    isGroupChat: false,
+  }).populate({
+    path: "users",
+    select: "fullName username avatar",
+    model: "user",
+    strictPopulate: false,
+  });
+
+  const groupChats = await Chat.find({
+    users: { $in: [_id] },
     isGroupChat: true,
-  })
-    .populate({
-      path: "users",
-      select: "name username avatar",
-      model: "user",
-      strictPopulate: false,
-      options: { limit: 2, sort: { updatedAt: -1 } },
-    })
-    .limit(limit)
-    .skip((pageNo - 1) * limit);
+  }).populate({
+    path: "users",
+    select: "fullName username avatar",
+    model: "user",
+    strictPopulate: false,
+    options: { limit: 2 },
+  });
 
-  const chatData = await Promise.all(
-    chats.map(async (chat) => {
-      const lastMessage = await Message.findOne({ chat: chat._id })
-        .sort("-createdAt")
-        .exec();
+  const chats = [...privateChats, ...groupChats];
 
-      const unreadMessages = await Message.exists({
-        chat: chat._id,
-        readBy: { $ne: _id },
-      });
-
-      return {
-        ...chat.toObject(),
-        lastMessage: lastMessage ? lastMessage.content : null,
-        unreadMessages: !!unreadMessages,
-      };
-    })
-  );
-
-  if (!chats) {
+  if (!chats || !chats.length) {
     throw new ApiError(404, "No chats found");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, chatData, "Chats fetched successfully"));
+    .json(new ApiResponse(200, chats, "Chats fetched successfully"));
 });
 
 const addParticipants = asyncHandler(async (req: Request, res: Response) => {

@@ -263,6 +263,7 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  const messagesCount = await Message.countDocuments({ chat: chatId });
   const messages = await Message.find({ chat: chatId })
     .populate("sender reacts", "username fullName avatar")
     .sort({ createdAt: -1 })
@@ -275,7 +276,9 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, messages, "Messages fetched"));
+    .json(
+      new ApiResponse(200, { messages, max: messagesCount }, "Messages fetched")
+    );
 });
 
 const editMessageContent = asyncHandler(async (req: Request, res: Response) => {

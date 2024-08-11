@@ -9,14 +9,6 @@ import { NotificationPreferences } from "../models/notificationpreferences.model
 import sendNotification from "../helpers/firebase";
 import { User } from "../models/user.model";
 
-// limit number of followers for pagination
-const limit = 20;
-let pageNo = 1;
-
-interface FollowWithMax extends FollowInterface {
-  max: number;
-}
-
 const follow = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(400, "User not verified");
@@ -142,41 +134,19 @@ const getFollowers = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "User not verified");
   }
   const { _id } = req.user;
-  const { page } = req.query;
 
-  if (page) {
-    pageNo = parseInt(page as string);
-    if (pageNo <= 0) {
-      pageNo = 1;
-    }
-  }
-
-  const follow = await Follow.findOne<FollowWithMax>(
-    { user: _id },
-    { max: { $size: "$followers" } }
-  )
-    .populate({
-      path: "followers",
-      select: "fullName username avatar",
-      model: "user",
-      strictPopulate: false,
-    })
-    .limit(limit)
-    .skip((pageNo - 1) * limit);
+  const follow = await Follow.findOne({ user: _id }).populate({
+    path: "followers",
+    select: "fullName username avatar",
+    model: "user",
+    strictPopulate: false,
+  });
 
   if (!follow) {
     throw new ApiError(404, "Followers not found");
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { followers: follow.followers, max: follow.max },
-        "Followers found"
-      )
-    );
+  return res.status(200).json(new ApiResponse(200, follow, "Followers found"));
 });
 
 const getFollowing = asyncHandler(async (req: Request, res: Response) => {
@@ -184,41 +154,19 @@ const getFollowing = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "User not verified");
   }
   const { _id } = req.user;
-  const { page } = req.query;
 
-  if (page) {
-    pageNo = parseInt(page as string);
-    if (pageNo <= 0) {
-      pageNo = 1;
-    }
-  }
-
-  const follow = await Follow.findOne<FollowWithMax>(
-    { user: _id },
-    { max: { $size: "$followings" } }
-  )
-    .populate({
-      path: "followings",
-      select: "fullName username avatar",
-      model: "user",
-      strictPopulate: false,
-    })
-    .limit(limit)
-    .skip((pageNo - 1) * limit);
+  const follow = await Follow.findOne({ user: _id }).populate({
+    path: "followings",
+    select: "fullName username avatar",
+    model: "user",
+    strictPopulate: false,
+  });
 
   if (!follow) {
     throw new ApiError(404, "Followings not found");
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { followings: follow.followings, max: follow.max },
-        "Followings found"
-      )
-    );
+  return res.status(200).json(new ApiResponse(200, follow, "Followings found"));
 });
 
 const getSuggestions = asyncHandler(async (req: Request, res: Response) => {
