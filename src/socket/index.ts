@@ -34,6 +34,20 @@ const newGroupChatEvent = (socket: Socket) => {
   });
 };
 
+const callEvent = (socket: Socket) => {
+  socket.on(ChatEventEnum.NEW_CALL_EVENT, ({ chatId, isVideo }) => {
+    socket.in(chatId).emit(ChatEventEnum.NEW_CALL_EVENT, { chatId, isVideo });
+    console.log("New video call event chatId: ", chatId);
+  });
+};
+
+const callAcceptedEvent = (socket: Socket) => {
+  socket.on(ChatEventEnum.CALL_ACCEPTED_EVENT, ({ chatId, ans }) => {
+    socket.in(chatId).emit(ChatEventEnum.CALL_ACCEPTED_EVENT, { chatId, ans });
+    console.log("Call accepted event chatId: ", chatId);
+  });
+};
+
 const initializeSocket = (io: Server) => {
   return io.on("connection", async (socket: Socket) => {
     try {
@@ -65,6 +79,8 @@ const initializeSocket = (io: Server) => {
       typingEvent(socket);
       stopTypingEvent(socket);
       newGroupChatEvent(socket);
+      callEvent(socket);
+      callAcceptedEvent(socket);
 
       socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
         console.log(

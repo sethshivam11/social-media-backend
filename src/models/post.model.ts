@@ -2,6 +2,12 @@ import mongoose, { Schema, Document, ObjectId } from "mongoose";
 import { Like } from "./like.model";
 import { User } from "./user.model";
 
+interface Like extends Document {
+  user: ObjectId;
+  post: ObjectId;
+  content: string;
+}
+
 interface PostInterface extends Document {
   user: ObjectId;
   caption: string;
@@ -13,6 +19,7 @@ interface PostInterface extends Document {
   dislikePost(disliker: ObjectId): Promise<PostInterface>;
   post(): Promise<PostInterface>;
   updatePostCount(): Promise<PostInterface>;
+  getLikes(postId: ObjectId): Promise<Like[]>;
 }
 
 const postSchema: Schema<PostInterface> = new Schema(
@@ -87,6 +94,16 @@ postSchema.methods.dislikePost = async function (disliker: ObjectId) {
   await react.deleteOne();
 
   return this;
+};
+
+postSchema.methods.getLikes = async function (postId: ObjectId) {
+  const likes = await Like.findOne({ post: postId }).populate({
+    model: "user",
+    path: "user",
+    select: "fullName username avatar",
+    strictPopulate: false,
+  });
+  return likes;
 };
 
 export const Post = mongoose.model<PostInterface>("post", postSchema);

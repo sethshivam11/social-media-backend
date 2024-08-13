@@ -45,7 +45,6 @@ const userSchema: Schema<UserInterface> = new Schema(
       type: String,
       required: true,
       trim: true,
-      index: true,
       unique: true,
     },
     password: {

@@ -185,7 +185,7 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                           width="100%"
                         >
                           <img
-                            src="https://res.cloudinary.com/dv3qbj0bn/image/upload/f_auto,q_auto/v1/sociial/story/lk08iobxazmcw2dniyif"
+                            src="https://res.cloudinary.com/dv3qbj0bn/image/upload/v1723483520/sociial/settings/nt0usbouujyibifgqqa9.svg"
                             style="
                               width: 50px;
                               object-fit: contain;
@@ -349,7 +349,7 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                                 >
                                   <div>
                                     <img
-                                      src="https://res.cloudinary.com/dv3qbj0bn/image/upload/f_auto,q_auto/v1/sociial/story/wuibcvmsqg1sappdtsgw"
+                                      src="https://res.cloudinary.com/dv3qbj0bn/image/upload/v1723483416/sociial/settings/xi8j95procutxupugtqi.jpg"
                                       style="width: 100%; object-fit: contain"
                                     />
                                   </div>

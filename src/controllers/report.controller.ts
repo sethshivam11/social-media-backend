@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError";
 import { asyncHandler } from "../utils/AsyncHandler";
 import { ReportModel } from "../models/report.model";
 import { ApiResponse } from "../utils/ApiResponse";
-import { cleanupFiles } from "../utils/cloudinary";
+import { cleanupFiles, uploadToCloudinary } from "../utils/cloudinary";
 
 export const createReport = asyncHandler(
   async (req: Request, res: Response) => {
@@ -12,7 +12,18 @@ export const createReport = asyncHandler(
       throw new ApiError(401, "User not verified");
     }
 
-    const { title, description, kind, entityId, images } = req.body;
+    const { title, description, kind, entityId } = req.body;
+    const imageFileLocalPath = req.file?.path;
+    let images: string[] = [];
+    if (imageFileLocalPath) {
+      const uploadedImage = await uploadToCloudinary(
+        imageFileLocalPath,
+        "report"
+      );
+      if (uploadedImage) {
+        images.push(uploadedImage.secure_url);
+      }
+    }
 
     if (!title || !description || !kind || !entityId) {
       cleanupFiles();

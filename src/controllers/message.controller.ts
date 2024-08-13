@@ -43,7 +43,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   }[] = [];
   await Promise.all(
     attachmentsLocalPath.map(async (localPath) => {
-      const upload = await uploadToCloudinary(localPath.path);
+      const upload = await uploadToCloudinary(localPath.path, "message");
       if (upload && upload.secure_url)
         switch (localPath.mimetype.split("/")[0]) {
           case "image":

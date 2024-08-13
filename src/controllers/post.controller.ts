@@ -77,7 +77,7 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
       throw new ApiError(400, "Invalid media file type");
     }
 
-    const upload = await uploadToCloudinary(mediaFiles[0].path);
+    const upload = await uploadToCloudinary(mediaFiles[0].path, "video");
     if (upload && upload.secure_url) media.push(upload.secure_url);
 
     if (!media || !media.length) {
@@ -107,7 +107,7 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
   await Promise.all(
     mediaFiles.map(async (file) => {
       if (file.mimetype.includes("image")) {
-        const upload = await uploadToCloudinary(file.path);
+        const upload = await uploadToCloudinary(file.path, "post");
         if (upload && upload.secure_url) media.push(upload.secure_url);
       }
     })
@@ -423,6 +423,27 @@ const dislikePost = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, post, "Post disliked successfully"));
 });
 
+const getLikes = asyncHandler(async (req: Request, res: Response) => {
+  const { postId } = req.params;
+  if (!postId) {
+    throw new ApiError(400, "Post id is required");
+  }
+
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  const likes = await post.getLikes(post._id);
+  if (!likes || !likes.length) {
+    throw new ApiError(404, "No likes found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, likes, "Likes retrieved successfully"));
+});
+
 export {
   createPost,
   deletePost,
@@ -431,5 +452,6 @@ export {
   likePost,
   dislikePost,
   getPost,
-  explorePosts
+  explorePosts,
+  getLikes,
 };

@@ -73,7 +73,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   let groupIcon = DEFAULT_GROUP_ICON;
   const groupIconLocalPath = (req.file as File)?.path;
   if (groupIconLocalPath) {
-    const groupIconData = await uploadToCloudinary(groupIconLocalPath);
+    const groupIconData = await uploadToCloudinary(groupIconLocalPath, "avatar");
     if (!groupIconData) {
       cleanupFiles();
       throw new ApiError(
@@ -301,7 +301,7 @@ const updateGroupDetails = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (groupIconLocalPath) {
-    const groupIcon = await uploadToCloudinary(groupIconLocalPath);
+    const groupIcon = await uploadToCloudinary(groupIconLocalPath, "avatar");
     if (!groupIcon) {
       cleanupFiles();
       throw new ApiError(

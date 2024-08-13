@@ -91,14 +91,14 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
   const avatarLocalPath = (req.file as File)?.path;
   let avatar;
   if (avatarLocalPath) {
-    avatar = await uploadToCloudinary(avatarLocalPath);
+    avatar = await uploadToCloudinary(avatarLocalPath, "avatar");
 
     if (!avatar) {
       throw new ApiError(400, "Error while uploading the avatar file");
     }
   }
 
-  const verifyCode =  Math.floor(100000 + Math.random() * 900000);
+  const verifyCode = Math.floor(100000 + Math.random() * 900000);
   const verifyCodeExpiry = Date.now() + 600_000;
 
   const user = await User.create({
@@ -362,7 +362,7 @@ const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Avatar file is required");
   }
 
-  const avatar = await uploadToCloudinary(avatarLocalPath);
+  const avatar = await uploadToCloudinary(avatarLocalPath, "avatar");
   if (!avatar) {
     throw new ApiError(
       400,

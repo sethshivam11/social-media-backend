@@ -18,13 +18,16 @@ const cleanupFiles = async () => {
   });
 };
 
-const uploadToCloudinary = async (localFilePath: string, story?: boolean) => {
+const uploadToCloudinary = async (
+  localFilePath: string,
+  type: "message" | "video" | "story" | "post" | "avatar" | "report" | "miscellaneous"
+) => {
   try {
     if (!localFilePath) return null;
-
+    const presets = JSON.parse(process.env.CLOUDINARY_UPLOAD_PRESETS || "{}");
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
-      upload_preset: story ? "sociialstory" : "sociial",
+      upload_preset: presets[type],
     });
 
     fs.unlinkSync(localFilePath);

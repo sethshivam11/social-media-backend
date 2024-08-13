@@ -32,4 +32,6 @@ router.route("/dislike/:postId").get(dislikePost);
 
 router.route("/delete/:postId").delete(deletePost);
 
+router.route("/getLikes/:postId").get();
+
 export default router;
