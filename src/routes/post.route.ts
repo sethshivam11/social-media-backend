@@ -6,6 +6,7 @@ import {
   deletePost,
   dislikePost,
   explorePosts,
+  getLikes,
   getPost,
   getUserPosts,
   likePost,
@@ -14,15 +15,15 @@ import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 
+router.route("/:postId").get(getPost);
+
 router.use(verifyJWT);
 
 router.route("/new").post(upload.array("media", 5), createPost);
 
 router.route("/user/:userId").get(getUserPosts);
 
-router.route("/:postId").get(getPost);
-
-router.route("/createFeed").get(createFeed);
+router.route("/feed").get(createFeed);
 
 router.route("/exploreFeed").get(explorePosts);
 
@@ -32,6 +33,6 @@ router.route("/dislike/:postId").get(dislikePost);
 
 router.route("/delete/:postId").delete(deletePost);
 
-router.route("/getLikes/:postId").get();
+router.route("/getLikes/:postId").get(getLikes);
 
 export default router;

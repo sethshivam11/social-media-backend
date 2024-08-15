@@ -18,7 +18,7 @@ export const createReport = asyncHandler(
     if (imageFileLocalPath) {
       const uploadedImage = await uploadToCloudinary(
         imageFileLocalPath,
-        "report"
+        "reports"
       );
       if (uploadedImage) {
         images.push(uploadedImage.secure_url);

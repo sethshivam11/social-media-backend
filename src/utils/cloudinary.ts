@@ -20,14 +20,21 @@ const cleanupFiles = async () => {
 
 const uploadToCloudinary = async (
   localFilePath: string,
-  type: "message" | "video" | "story" | "post" | "avatar" | "report" | "miscellaneous"
+  type:
+    | "messages"
+    | "videos"
+    | "stories"
+    | "posts"
+    | "avatars"
+    | "reports"
+    | "miscellaneous"
 ) => {
   try {
     if (!localFilePath) return null;
-    const presets = JSON.parse(process.env.CLOUDINARY_UPLOAD_PRESETS || "{}");
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
-      upload_preset: presets[type],
+      folder: `sociial/${type}`,
+      upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || "sociial",
     });
 
     fs.unlinkSync(localFilePath);

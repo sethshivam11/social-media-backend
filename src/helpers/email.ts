@@ -185,7 +185,7 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                           width="100%"
                         >
                           <img
-                            src="https://res.cloudinary.com/dv3qbj0bn/image/upload/v1723483520/sociial/settings/nt0usbouujyibifgqqa9.svg"
+                            src="https://res.cloudinary.com/dv3qbj0bn/image/upload/v1723703398/sociial/settings/vwrj1vvzzvvvbgzc8fdn.png"
                             style="
                               width: 50px;
                               object-fit: contain;

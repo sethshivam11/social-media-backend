@@ -6,10 +6,10 @@ interface MessageInterface extends Document {
   content: string;
   kind?: "message" | "location" | "call" | "media" | "audio" | "document";
   reacts: { content: string; user: ObjectId }[];
-  attachments: {
+  attachment: {
     url: string;
-    type: "image" | "video" | "audio" | "document";
-  }[];
+    kind: "image" | "video" | "audio" | "document";
+  };
   reply?: {
     username: string;
     content: string;
@@ -32,12 +32,10 @@ const messageSchema: Schema<MessageInterface> = new Schema(
       type: String,
       trim: true,
     },
-    attachments: [
-      {
-        url: String,
-        type: String,
-      },
-    ],
+    attachment: {
+      url: String,
+      kind: String,
+    },
     reacts: [
       {
         content: {

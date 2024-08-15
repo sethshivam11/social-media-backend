@@ -11,7 +11,6 @@ import {
 import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../constants";
 import sendEmail from "../helpers/mailer";
-import mongoose from "mongoose";
 import { Follow } from "../models/follow.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 
@@ -91,7 +90,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
   const avatarLocalPath = (req.file as File)?.path;
   let avatar;
   if (avatarLocalPath) {
-    avatar = await uploadToCloudinary(avatarLocalPath, "avatar");
+    avatar = await uploadToCloudinary(avatarLocalPath, "avatars");
 
     if (!avatar) {
       throw new ApiError(400, "Error while uploading the avatar file");
@@ -168,13 +167,13 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getProfile = asyncHandler(async (req: Request, res: Response) => {
-  const { username, _id } = req.query;
+  const { username, userId } = req.query;
 
-  if (!username || !(username instanceof String) || !username?.trim()) {
-    throw new ApiError(400, "Username is required");
+  if (!username && !userId) {
+    throw new ApiError(400, "Username or user id is required");
   }
 
-  const user = await User.findOne({ $or: [{ username }, { _id }] });
+  const user = await User.findOne({ $or: [{ username }, { userId }] });
 
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -344,11 +343,7 @@ const updatePassword = asyncHandler(async (req: Request, res: Response) => {
   user.password = newPassword;
   await user.save();
 
-  const newUser = removeSensitiveData(user);
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, newUser, "Password was changed"));
+  return res.status(200).json(new ApiResponse(200, {}, "Password was updated"));
 });
 
 const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
@@ -362,7 +357,7 @@ const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Avatar file is required");
   }
 
-  const avatar = await uploadToCloudinary(avatarLocalPath, "avatar");
+  const avatar = await uploadToCloudinary(avatarLocalPath, "avatars");
   if (!avatar) {
     throw new ApiError(
       400,
@@ -371,7 +366,7 @@ const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Delete file from cloudinary / record if not deleted
-  await deleteFromCloudinary(req.user.avatar as string);
+  await deleteFromCloudinary(req.user.avatar);
 
   const user = await User.findByIdAndUpdate(
     _id,
@@ -432,7 +427,7 @@ const updateEmail = asyncHandler(async (req: Request, res: Response) => {
 
   const existedUser = await User.findOne({ email });
   if (existedUser) {
-    throw new ApiError(409, "Email already exists");
+    throw new ApiError(409, "Please use another email");
   }
 
   const isCodeInvalid = user.verifyCode === code;
@@ -482,11 +477,15 @@ const updateDetails = asyncHandler(async (req: Request, res: Response) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const newUser = removeSensitiveData(user);
-
   return res
     .status(200)
-    .json(new ApiResponse(200, newUser, "User details updated"));
+    .json(
+      new ApiResponse(
+        200,
+        { bio: user.bio, fullName: user.fullName },
+        "User details updated"
+      )
+    );
 });
 
 const blockUser = asyncHandler(async (req: Request, res: Response) => {
@@ -495,52 +494,61 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id } = req.user;
 
-  const { blockUserId } = req.params;
-  if (!blockUserId) {
-    throw new ApiError(400, "Blocked user is required");
+  const { userId, username } = req.query;
+  if (!userId && !username) {
+    throw new ApiError(400, "Blocked username or user id is required");
   }
 
-  const user = await User.findById(_id);
-  if (!user) {
+  const currentUser = await User.findById(_id);
+  const blockUser = await User.findOne({
+    $or: [{ _id: userId }, { username }],
+  });
+  if (!blockUser || !currentUser) {
     throw new ApiError(404, "User not found");
   }
-  const blockedUser = new mongoose.Schema.Types.ObjectId(blockUserId);
-  if (!blockedUser) {
-    throw new ApiError(404, "Blocked user not found");
-  }
 
-  if (user.blocked.includes(blockedUser)) {
+  if (currentUser.blocked.includes(blockUser._id)) {
     throw new ApiError(409, "User already blocked");
   }
 
-  const follow = await Follow.findOne({ user: _id });
-  if (!follow) {
-    throw new ApiError(400, "Something went wrong, while blocking the user");
+  const userFollow = await Follow.findOne({ user: currentUser._id });
+  if (userFollow) {
+    if (userFollow.followers.includes(blockUser._id)) {
+      userFollow.followers = userFollow.followers.filter(
+        (follower) => follower !== blockUser._id
+      );
+      blockUser.followersCount -= 1;
+    }
+    if (userFollow.followings.includes(blockUser._id)) {
+      userFollow.followings = userFollow.followings.filter(
+        (following) => following !== blockUser._id
+      );
+      blockUser.followingCount -= 1;
+    }
+    await userFollow.save({ validateBeforeSave: false });
+  }
+  const blockUserFollow = await Follow.findOne({ user: blockUser._id });
+  if (blockUserFollow) {
+    if (blockUserFollow.followers.includes(blockUser._id)) {
+      blockUserFollow.followers = blockUserFollow.followers.filter(
+        (follower) => follower !== blockUser._id
+      );
+      blockUser.followersCount -= 1;
+    }
+    if (blockUserFollow.followings.includes(blockUser._id)) {
+      blockUserFollow.followings = blockUserFollow.followings.filter(
+        (following) => following !== blockUser._id
+      );
+      blockUser.followingCount -= 1;
+    }
+    await blockUserFollow.save({ validateBeforeSave: false });
   }
 
-  if (follow.followers.includes(blockedUser)) {
-    follow.followers = follow.followers.filter(
-      (follower) => follower !== blockedUser
-    );
-    user.followersCount -= 1;
-    await follow.save();
-  }
-  if (follow.followings.includes(blockedUser)) {
-    follow.followings = follow.followings.filter(
-      (following) => following !== blockedUser
-    );
-    user.followingCount -= 1;
-    await follow.save();
-  }
+  currentUser.blocked = [...currentUser.blocked, blockUser._id];
+  await currentUser.save({ validateBeforeSave: false });
+  await blockUser.save({ validateBeforeSave: false });
 
-  user.blocked = [...user.blocked, blockedUser];
-  await user.save({ validateBeforeSave: false });
-
-  const newUser = removeSensitiveData(user);
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, newUser, "User was blocked"));
+  return res.status(200).json(new ApiResponse(200, {}, "User was blocked"));
 });
 
 const unblockUser = asyncHandler(async (req: Request, res: Response) => {
@@ -549,29 +557,29 @@ const unblockUser = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id } = req.user;
 
-  const { unblockUserId } = req.params;
-  if (!unblockUserId) {
-    throw new ApiError(400, "Unblocked user is required");
+  const { username, userId } = req.query;
+  if (!userId && !username) {
+    throw new ApiError(400, "Unblocked username or user id is required");
   }
-
-  const user = await User.findById(_id);
-  if (!user) {
+  const currentUser = await User.findById(_id);
+  const unblockUser = await User.findOne({
+    $or: [{ _id: userId }, { username }],
+  });
+  if (!unblockUser || !currentUser) {
     throw new ApiError(404, "User not found");
   }
 
-  user.blocked = user.blocked.filter(
-    (ele) => ele.toString() !== unblockUserId.toString()
+  currentUser.blocked = currentUser.blocked.filter(
+    (ele) => ele.toString() !== unblockUser._id.toString()
   );
-  await user.save({ validateBeforeSave: false });
-
-  const newUser = removeSensitiveData(user);
+  await currentUser.save({ validateBeforeSave: false });
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { user: newUser, unblockUserId },
+        { blocked: currentUser.blocked },
         "User was unblocked"
       )
     );
@@ -650,27 +658,49 @@ const searchUsers = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, blocked } = req.user;
+  const { blocked } = req.user;
   const { username, fullName } = req.query;
   if (!(username || fullName)) {
-    throw new ApiError(400, "Query is required");
+    throw new ApiError(400, "Username or fullName is required");
   }
 
-  const user = User.find(
+  const users = await User.find(
     {
       $or: [
-        { $regex: username, $options: "i" },
-        { $regex: fullName, $options: "i" },
+        { username: { $regex: `${username}`, $options: "i" } },
+        { fullName: { $regex: `${fullName}`, $options: "i" } },
       ],
-      $nin: [_id, ...(blocked || [])],
+      _id: { $nin: blocked },
     },
     "username fullName avatar"
   );
-  if (!user) {
+  if (!users || !users.length) {
     throw new ApiError(404, "No users found");
   }
 
-  return res.status(200).json(new ApiResponse(200, user, "Users found"));
+  return res.status(200).json(new ApiResponse(200, users, "Users found"));
+});
+
+const getBlockedUsers = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const currentUser = req.user;
+
+  const blockedUsers = await User.populate(currentUser, {
+    path: "blocked",
+    select: "username avatar fullName",
+    model: "user",
+    strictPopulate: false,
+  });
+
+  if (!blockedUsers.blocked || !blockedUsers.blocked.length) {
+    throw new ApiError(404, "No blocked users found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, blockedUsers.blocked, "Blocked users"));
 });
 
 export {
@@ -692,4 +722,5 @@ export {
   isUsernameAvailable,
   resendEmail,
   searchUsers,
+  getBlockedUsers,
 };

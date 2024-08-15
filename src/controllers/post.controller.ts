@@ -12,47 +12,12 @@ import {
 import { NotificationModel } from "../models/notification.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import sendNotification from "../helpers/firebase";
+import { Follow } from "../models/follow.model";
+import mongoose from "mongoose";
+import { Comment } from "../models/comment.model";
 
 const limit = 20;
 let pageNo = 1;
-
-async function getFollowings(userId: string) {
-  //  Get users that the logged in user is following
-  const follow = await Post.aggregate([
-    {
-      $lookup: {
-        from: "follows",
-        localField: "user",
-        foreignField: "user",
-        as: "follow",
-      },
-    },
-    {
-      $match: {
-        $expr: {
-          $eq: ["$user", userId],
-        },
-      },
-    },
-    {
-      $unwind: "$follow",
-    },
-    {
-      $project: {
-        follow: 1,
-      },
-    },
-    {
-      $limit: 1,
-    },
-  ]);
-
-  if (follow.length === 0 || follow[0].follow.followings.length === 0) {
-    return [];
-  }
-
-  return follow[0].follow.followings;
-}
 
 const createPost = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -77,7 +42,7 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
       throw new ApiError(400, "Invalid media file type");
     }
 
-    const upload = await uploadToCloudinary(mediaFiles[0].path, "video");
+    const upload = await uploadToCloudinary(mediaFiles[0].path, "videos");
     if (upload && upload.secure_url) media.push(upload.secure_url);
 
     if (!media || !media.length) {
@@ -107,7 +72,7 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
   await Promise.all(
     mediaFiles.map(async (file) => {
       if (file.mimetype.includes("image")) {
-        const upload = await uploadToCloudinary(file.path, "post");
+        const upload = await uploadToCloudinary(file.path, "posts");
         if (upload && upload.secure_url) media.push(upload.secure_url);
       }
     })
@@ -146,7 +111,7 @@ const deletePost = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Post id is required");
   }
 
-  const post = await Post.findById(postId);
+  const post = await Post.findById(postId, "-likes");
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
@@ -155,13 +120,15 @@ const deletePost = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, "Unauthorized request");
   }
 
-  await deleteFromCloudinary(post.media as string);
-
+  await Promise.all(
+    post.media.map(async (media) => deleteFromCloudinary(media))
+  );
+  await Comment.deleteMany({ post: postId });
   await post.deleteOne();
 
   return res
     .status(200)
-    .json(new ApiResponse(200, post, "Post deleted successfully"));
+    .json(new ApiResponse(200, {}, "Post deleted successfully"));
 });
 
 const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
@@ -181,7 +148,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // first post with user's details
-  const firstPost = await Post.findOne({ user: userId }).populate({
+  const firstPost = await Post.findOne({ user: userId }, "-likes").populate({
     path: "user",
     model: "user",
     select: "username fullName avatar followingCount followersCount postsCount",
@@ -206,10 +173,6 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getPost = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-
   const { postId } = req.params;
   if (!postId) {
     throw new ApiError(400, "Post id is required");
@@ -223,7 +186,7 @@ const getPost = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const post = await Post.findById(postId).populate({
+  const post = await Post.findById(postId, "-likes").populate({
     model: "user",
     path: "user",
     select: "username avatar fullName followersCount followingCount postsCount",
@@ -234,26 +197,21 @@ const getPost = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Post not found");
   }
 
-  const relatedPosts = await Post.find({
-    user: post?.user,
-    _id: { $nin: [post._id] },
-  }).limit(6);
+  // const relatedPosts = await Post.find({
+  //   user: post?.user,
+  //   _id: { $nin: [post._id] },
+  // }).limit(6);
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { post, relatedPosts },
-        "Post retrieved successfully"
-      )
-    );
+    .json(new ApiResponse(200, { post }, "Post retrieved successfully"));
 });
 
 const createFeed = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
+
   const { _id, blocked } = req.user;
   const { page } = req.query;
 
@@ -263,17 +221,22 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
       pageNo = 1;
     }
   }
+  console.log(_id, blocked);
 
-  const followings = await getFollowings(_id);
+  const follow = await Follow.findOne({ user: _id });
+  const followings = follow?.followings || [];
 
   const totalCount = await Post.countDocuments({
-    user: { $in: followings, $nin: blocked },
+    user: { $in: [], $nin: [] },
   });
 
   // Get posts of the users that the logged in user is following
-  const posts = await Post.find({
-    user: { $in: followings, $nin: blocked },
-  })
+  const posts = await Post.find(
+    {
+      user: { $in: followings, $nin: blocked },
+    },
+    "-likes"
+  )
     .populate({
       model: "user",
       path: "user",
@@ -287,25 +250,28 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "No posts found");
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { posts, max: totalCount },
-        "Posts retrieved successfully"
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        posts,
+        max: totalCount,
+        page: pageNo,
+      },
+      "Posts retrieved successfully"
+    )
+  );
 });
 
 const explorePosts = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-
   const { _id, blocked } = req.user;
   const { page } = req.query;
-  const followings = await getFollowings(_id);
+
+  const follow = await Follow.findOne({ user: _id });
+  const followings = follow?.followings || [];
 
   if (page) {
     pageNo = parseInt(page as string);
@@ -318,9 +284,12 @@ const explorePosts = asyncHandler(async (req: Request, res: Response) => {
     user: { $nin: [...followings, ...blocked] },
   });
 
-  const posts = await Post.find({
-    user: { $nin: [...followings, ...blocked] },
-  })
+  const posts = await Post.find(
+    {
+      user: { $nin: [...followings, ...blocked] },
+    },
+    "-likes"
+  )
     .populate({
       model: "user",
       path: "user",
@@ -349,25 +318,28 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, avatar } = req.user;
+  const { _id, avatar, username } = req.user;
 
   const { postId } = req.params;
   if (!postId) {
     throw new ApiError(400, "Post id is required");
   }
 
-  const post = await Post.findById(postId);
+  const post = await Post.findById(postId, "likes likesCount user");
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
 
-  const like = await post.likePost(_id);
-  if (typeof like === "string") {
-    throw new ApiError(409, like);
+  if (!post.likes.includes(_id)) {
+    post.likes = [...post.likes, _id];
+    post.likesCount += 1;
+    post.save();
   }
+
   await NotificationModel.create({
     title: `Post Liked`,
-    description: `${_id} liked you post`,
+    entityId: postId,
+    description: `${username} liked your post`,
     user: post.user,
   });
 
@@ -381,7 +353,7 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
   ) {
     sendNotification({
       title: "Post Liked",
-      body: `${_id} liked your post`,
+      body: `${username} liked your post`,
       token: notificationPreference.firebaseToken,
       image: avatar,
     });
@@ -403,19 +375,22 @@ const dislikePost = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Post id is required");
   }
 
-  const post = await Post.findById(postId);
+  const post = await Post.findById(postId, "likes likesCount user");
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
 
-  const dislike = await post.dislikePost(_id);
-  if (typeof dislike === "string") {
-    throw new ApiError(404, dislike);
+  if (post.likes.includes(_id)) {
+    post.likes = post.likes.filter(
+      (like) => like.toString() !== _id.toString()
+    );
+    post.likesCount -= 1;
+    post.save();
   }
 
   await NotificationModel.findOneAndDelete({
     title: "Post Liked",
-    user: post.user,
+    entityId: postId,
   });
 
   return res
@@ -429,19 +404,20 @@ const getLikes = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Post id is required");
   }
 
-  const post = await Post.findById(postId);
-  if (!post) {
-    throw new ApiError(404, "Post not found");
-  }
+  const post = await Post.findById(postId, "likes likesCount").populate({
+    model: "user",
+    path: "likes",
+    select: "avatar fullName username",
+    strictPopulate: false,
+  });
 
-  const likes = await post.getLikes(post._id);
-  if (!likes || !likes.length) {
+  if (!post || !post.likes.length) {
     throw new ApiError(404, "No likes found");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, likes, "Likes retrieved successfully"));
+    .json(new ApiResponse(200, post.likes, "Likes retrieved successfully"));
 });
 
 export {

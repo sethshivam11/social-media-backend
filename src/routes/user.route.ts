@@ -17,6 +17,9 @@ import {
   resendEmail,
   forgotPassword,
   getProfile,
+  updateEmail,
+  searchUsers,
+  getBlockedUsers,
 } from "../controllers/user.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -54,12 +57,16 @@ router.route("/removeAvatar").get(removeAvatar);
 
 router.route("/updateDetails").put(updateDetails);
 
+router.route("/updateEmail").patch(updateEmail);
+
 router.route("/updatePassword").patch(updatePassword);
 
-router.route("/block/:blockUserId").get(blockUser);
+router.route("/block").get(blockUser);
 
-router.route("/unblock/:unblockUserId").get(unblockUser);
+router.route("/unblock").get(unblockUser);
 
-router.route("/search").get(getCurrentUser);
+router.route("/search").get(searchUsers);
+
+router.route("/getBlocked").get(getBlockedUsers)
 
 export default router;

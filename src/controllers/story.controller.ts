@@ -38,7 +38,7 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
   await Promise.all(
     files.map(async (file) => {
       if (file.mimetype.includes("image")) {
-        const upload = await uploadToCloudinary(file.path, "story");
+        const upload = await uploadToCloudinary(file.path, "stories");
         if (upload && upload.secure_url) media.push(upload.secure_url);
       }
     })

@@ -22,6 +22,7 @@ export const ChatEventEnum = Object.freeze({
   ADMIN_REMOVE_EVENT: "someoneRemovedFromAdmin",
   NEW_CALL_EVENT: "newCall",
   CALL_ACCEPTED_EVENT: "callAccepted",
+  CALL_DISCONNECTED_EVENT: "callDisconnected",
 });
 
 export const DB_NAME = "sociial";

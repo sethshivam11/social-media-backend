@@ -73,7 +73,10 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   let groupIcon = DEFAULT_GROUP_ICON;
   const groupIconLocalPath = (req.file as File)?.path;
   if (groupIconLocalPath) {
-    const groupIconData = await uploadToCloudinary(groupIconLocalPath, "avatar");
+    const groupIconData = await uploadToCloudinary(
+      groupIconLocalPath,
+      "avatars"
+    );
     if (!groupIconData) {
       cleanupFiles();
       throw new ApiError(
@@ -186,10 +189,11 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
   if (!chat.admin.includes(_id)) {
     throw new ApiError(403, "You are not authorized to add participants");
   }
+  const participantsToAdd: string[] = [];
   participants.forEach((participant: string) => {
     const participantId = new mongoose.Schema.Types.ObjectId(participant);
-    if (chat.users.includes(participantId)) {
-      throw new ApiError(400, "Some participants already exists");
+    if (!chat.users.includes(participantId)) {
+      participantsToAdd.push(participant);
     }
   });
 
@@ -301,7 +305,7 @@ const updateGroupDetails = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (groupIconLocalPath) {
-    const groupIcon = await uploadToCloudinary(groupIconLocalPath, "avatar");
+    const groupIcon = await uploadToCloudinary(groupIconLocalPath, "avatars");
     if (!groupIcon) {
       cleanupFiles();
       throw new ApiError(
@@ -354,6 +358,8 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
 
   if (chat.groupIcon !== DEFAULT_GROUP_ICON)
     await deleteFromCloudinary(chat.groupIcon as string);
+
+  await chat.deleteMessages();
   await chat.deleteOne();
 
   chat.users.forEach((participant) => {

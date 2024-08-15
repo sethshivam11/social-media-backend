@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, ObjectId } from "mongoose";
 import { User, UserInterface } from "./user.model";
 import { DEFAULT_GROUP_ICON } from "../constants";
+import { Message } from "./message.model";
+import { deleteFromCloudinary } from "../utils/cloudinary";
 
 interface ChatInterface extends Document {
   users: ObjectId[];
@@ -9,6 +11,7 @@ interface ChatInterface extends Document {
   groupName: string;
   groupIcon: string;
   getParticipantsInfo(participants: string[]): UserInterface;
+  deleteMessages(): Promise<void>;
 }
 
 const chatSchema: Schema<ChatInterface> = new Schema(
@@ -31,7 +34,6 @@ const chatSchema: Schema<ChatInterface> = new Schema(
     ],
     groupName: {
       type: String,
-      default: "personal",
       trim: true,
     },
     groupIcon: {
@@ -55,6 +57,20 @@ chatSchema.methods.getParticipantsInfo = (participants: string[]) => {
   return User.findById({ $in: participants }).select(
     "fullName username avatar"
   );
+};
+
+chatSchema.methods.deleteMessages = async function () {
+  const messages = await Message.find({ chat: this._id });
+  if (messages) {
+    await Promise.all(
+      messages.map((message) => {
+        if (message.attachment.url) {
+          deleteFromCloudinary(message.attachment.url);
+        }
+      })
+    );
+    await Message.deleteMany({ chat: this._id });
+  }
 };
 
 export const Chat = mongoose.model<ChatInterface>("chat", chatSchema);

@@ -2,24 +2,21 @@ import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
 import {
   follow,
-  getFollowers,
   unfollow,
-  getFollowing,
-  getSuggestions
+  getFollowers,
+  getFollowings,
 } from "../controllers/follow.controller";
 
 const router = Router();
 
 router.use(verifyJWT);
 
-router.route("/new/:followee").post(follow);
+router.route("/new").get(follow);
 
-router.route("/unfollow/:unfollowee").post(unfollow);
+router.route("/unfollow").get(unfollow);
 
-router.route("/getFollowers").get(getFollowers);
+router.route("/followers").get(getFollowers);
 
-router.route("/getFollowing").get(getFollowing);
-
-router.route("/getProfile/:username").get(getSuggestions);
+router.route("/following").get(getFollowings);
 
 export default router;

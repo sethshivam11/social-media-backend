@@ -16,7 +16,7 @@ router.use(verifyJWT);
 
 router.route("/get").get(getMessages);
 
-router.route("/send").post(upload.array("attachments", 5), sendMessage);
+router.route("/send").post(upload.single("attachment"), sendMessage);
 
 router.route("/react").patch(reactMessage);
 

@@ -29,57 +29,44 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, username, avatar } = req.user;
 
-  const attachmentsLocalPath = req.files as File[];
+  const attachmentLocalFile = req.file as File;
   const { message, chatId, kind } = req.body;
 
-  if (!(message || attachmentsLocalPath) || !chatId) {
+  if (!(message || attachmentLocalFile) || !chatId) {
     cleanupFiles();
     throw new ApiError(400, "Message and chatId is required");
   }
 
-  let attachments: {
+  let attachment: {
     url: string;
-    type: "image" | "video" | "audio" | "document";
-  }[] = [];
-  await Promise.all(
-    attachmentsLocalPath.map(async (localPath) => {
-      const upload = await uploadToCloudinary(localPath.path, "message");
-      if (upload && upload.secure_url)
-        switch (localPath.mimetype.split("/")[0]) {
-          case "image":
-            attachments.push({
-              url: upload.secure_url,
-              type: "image",
-            });
-            break;
-          case "video":
-            attachments.push({
-              url: upload.secure_url,
-              type: "video",
-            });
-            break;
-          case "audio":
-            attachments.push({
-              url: upload.secure_url,
-              type: "audio",
-            });
-            break;
-          default:
-            attachments.push({
-              url: upload.secure_url,
-              type: "document",
-            });
-            break;
-        }
-    })
-  );
+    kind: "image" | "video" | "audio" | "document";
+  } = {
+    url: "",
+    kind: "document",
+  };
+  const upload = await uploadToCloudinary(attachmentLocalFile.path, "messages");
+  if (upload && upload.secure_url) attachment.url = upload.secure_url;
+  switch (attachmentLocalFile.mimetype.split("/")[0]) {
+    case "image":
+      attachment.kind = "image";
+      break;
+    case "video":
+      attachment.kind = "video";
+      break;
+    case "audio":
+      attachment.kind = "audio";
+      break;
+    default:
+      attachment.kind = "document";
+      break;
+  }
 
   const msg = await Message.create({
     content: message,
     chat: chatId,
     sender: _id,
     kind,
-    attachments,
+    attachment,
   });
 
   if (!msg) {
@@ -226,9 +213,9 @@ const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
   if (message.sender.toString() !== _id.toString()) {
     throw new ApiError(403, "You can't delete this message");
   }
-  await Promise.all(
-    message.attachments.map((file) => deleteFromCloudinary(file.url))
-  );
+  if (message.attachment.url) {
+    await deleteFromCloudinary(message.attachment.url);
+  }
 
   await message.deleteOne();
 

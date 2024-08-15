@@ -51,14 +51,6 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  await NotificationModel.create({
-    title: "New Comment",
-    description: `${username} commented on your post`,
-    user: _id,
-    link: `/posts/${postId}`,
-    type: "comment",
-  });
-
   const newComment = await Comment.create({
     post: postId,
     user: _id,
@@ -67,6 +59,15 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
   if (!newComment) {
     throw new ApiError(400, "Something went wrong, while creating comment");
   }
+
+  await NotificationModel.create({
+    title: "New Comment",
+    description: `${username} commented on your post`,
+    user: _id,
+    entityId: newComment._id,
+    link: `/posts/${postId}`,
+    type: "comment",
+  });
 
   await newComment.updateCommentsCount(postId, 1);
 
@@ -100,6 +101,7 @@ const deleteComment = asyncHandler(async (req: Request, res: Response) => {
 
   await NotificationModel.findOneAndDelete({
     user: comment.user,
+    entityId: commentId,
     link: `/posts/${comment.post}`,
   });
 
@@ -123,34 +125,38 @@ const likeComment = asyncHandler(async (req: Request, res: Response) => {
   if (!comment) {
     throw new ApiError(404, "Comment not found");
   }
-  await NotificationModel.create({
-    title: `Comment Liked`,
-    description: `Your comment was liked by @${username}`,
-    user: comment.user,
-    link: `/posts/${comment.post}`,
-  });
 
-  const notificationPreference = await NotificationPreferences.findOne({
-    user: comment.user,
-  });
-  if (
-    notificationPreference &&
-    notificationPreference.firebaseToken &&
-    notificationPreference.pushNotifications.commentLikes
-  ) {
-    sendNotification({
-      title: "New Group Chat",
-      body: `${username} added you to a group`,
-      token: notificationPreference.firebaseToken,
+  if (!comment.likes.includes(_id)) {
+    await comment.updateOne(
+      { $push: { likes: _id }, $inc: { likesCount: 1 } },
+      { new: true }
+    );
+    comment.likes = [...comment.likes, _id];
+    comment.likesCount = (comment.likesCount as number) + 1;
+
+    await NotificationModel.create({
+      title: `Comment Liked`,
+      entityId: commentId,
+      description: `Your comment was liked by @${username}`,
+      user: comment.user,
+      link: `/posts/${comment.post}`,
     });
-  }
 
-  await comment.updateOne(
-    { $push: { likes: _id }, $inc: { likesCount: 1 } },
-    { new: true }
-  );
-  comment.likes = [...comment.likes, _id];
-  comment.likesCount = (comment.likesCount as number) + 1;
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: comment.user,
+    });
+    if (
+      notificationPreference &&
+      notificationPreference.firebaseToken &&
+      notificationPreference.pushNotifications.commentLikes
+    ) {
+      sendNotification({
+        title: "New Group Chat",
+        body: `${username} added you to a group`,
+        token: notificationPreference.firebaseToken,
+      });
+    }
+  }
 
   return res
     .status(200)
@@ -172,19 +178,22 @@ const dislikeComment = asyncHandler(async (req: Request, res: Response) => {
   if (!comment) {
     throw new ApiError(404, "Comment not found");
   }
-  await NotificationModel.findOneAndDelete({
-    user: comment.user,
-    link: `/posts/${comment.post}`,
-  });
 
-  await comment.updateOne(
-    { $pull: { likes: _id }, $inc: { likesCount: -1 } },
-    { new: true }
-  );
-  comment.likes = comment.likes.filter(
-    (id) => id.toString() !== _id.toString()
-  );
-  comment.likesCount = (comment.likesCount as number) - 1;
+  if (comment.likes.includes(_id)) {
+    await comment.updateOne(
+      { $pull: { likes: _id }, $inc: { likesCount: -1 } },
+      { new: true }
+    );
+    comment.likes = comment.likes.filter(
+      (id) => id.toString() !== _id.toString()
+    );
+    comment.likesCount = comment.likesCount - 1;
+    await NotificationModel.deleteOne({
+      entityId: commentId,
+      title: `Comment Liked`,
+      user: comment.user,
+    });
+  }
 
   return res
     .status(200)

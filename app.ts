@@ -75,6 +75,6 @@ app.get("/", (_: Request, res: Response) => {
 
 initializeSocket(io);
 
-app.use(errorHandler);
+// app.use(errorHandler);
 
 export default httpServer;
