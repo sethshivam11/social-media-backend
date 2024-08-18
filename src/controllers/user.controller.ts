@@ -659,16 +659,16 @@ const searchUsers = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
   const { blocked } = req.user;
-  const { username, fullName } = req.query;
-  if (!(username || fullName)) {
+  const { query } = req.query;
+  if (!query) {
     throw new ApiError(400, "Username or fullName is required");
   }
 
   const users = await User.find(
     {
       $or: [
-        { username: { $regex: `${username}`, $options: "i" } },
-        { fullName: { $regex: `${fullName}`, $options: "i" } },
+        { username: { $regex: `${query}`, $options: "i" } },
+        { fullName: { $regex: `${query}`, $options: "i" } },
       ],
       _id: { $nin: blocked },
     },

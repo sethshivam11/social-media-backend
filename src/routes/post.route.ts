@@ -8,14 +8,17 @@ import {
   explorePosts,
   getLikes,
   getPost,
+  getSavedPosts,
   getUserPosts,
   likePost,
+  savePost,
+  unsavePost,
 } from "../controllers/post.controller";
 import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 
-router.route("/:postId").get(getPost);
+router.route("/post/:postId").get(getPost);
 
 router.use(verifyJWT);
 
@@ -34,5 +37,11 @@ router.route("/dislike/:postId").get(dislikePost);
 router.route("/delete/:postId").delete(deletePost);
 
 router.route("/getLikes/:postId").get(getLikes);
+
+router.route("/saved").get(getSavedPosts);
+
+router.route("/save/:postId").get(savePost);
+
+router.route("/unsave/:postId").get(unsavePost);
 
 export default router;

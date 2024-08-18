@@ -4,7 +4,7 @@ interface ReportInterface extends Document {
   username: ObjectId;
   title: string;
   description: string;
-  kind: "post" | "comment" | "user" | "chat" | "problem";
+  kind: "post" | "comment" | "user" | "chat" | "problem" | "story";
   entityId: string;
   images?: string[];
 }

@@ -10,7 +10,13 @@ interface ChatInterface extends Document {
   admin: ObjectId[];
   groupName: string;
   groupIcon: string;
-  getParticipantsInfo(participants: string[]): UserInterface;
+  description: string;
+  getParticipantsInfo(participants: string[]): {
+    _id: ObjectId;
+    username: string;
+    fullName: string;
+    avatar: string;
+  };
   deleteMessages(): Promise<void>;
 }
 
@@ -40,6 +46,7 @@ const chatSchema: Schema<ChatInterface> = new Schema(
       type: String,
       default: DEFAULT_GROUP_ICON,
     },
+    description: String,
   },
   {
     timestamps: true,
@@ -53,7 +60,9 @@ chatSchema.pre("save", function (next) {
   next();
 });
 
-chatSchema.methods.getParticipantsInfo = (participants: string[]) => {
+chatSchema.methods.getParticipantsInfo = (
+  participants: string[] | ObjectId[]
+) => {
   return User.findById({ $in: participants }).select(
     "fullName username avatar"
   );

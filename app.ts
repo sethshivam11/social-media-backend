@@ -51,7 +51,7 @@ import messageRouter from "./src/routes/message.route";
 import storyRouter from "./src/routes/story.route";
 import reportRouter from "./src/routes/report.route";
 import notificationRouter from "./src/routes/notification.route";
-import notificationPreferenceRouter from "./src/routes/notificationpreferences.route";
+import notificationPreferenceRouter from "./src/routes/notificationpreference.route";
 
 // Routes declarations
 app.use("/api/v1/users", userRouter);
@@ -62,7 +62,7 @@ app.use("/api/v1/chats", chatRouter);
 app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/stories", storyRouter);
 app.use("/api/v1/report", reportRouter);
-app.use("/api/v1/notification", notificationRouter);
+app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/notificationPreferences", notificationPreferenceRouter);
 app.get("/", (_: Request, res: Response) => {
   return res.json({
@@ -75,6 +75,6 @@ app.get("/", (_: Request, res: Response) => {
 
 initializeSocket(io);
 
-// app.use(errorHandler);
+app.use(errorHandler);
 
 export default httpServer;

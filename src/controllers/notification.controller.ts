@@ -27,7 +27,7 @@ const readNotification = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Notification read successfully"));
+    .json(new ApiResponse(200, {}, "Notification marked as read successfully"));
 });
 
 const getNotifications = asyncHandler(async (req: Request, res: Response) => {

@@ -11,7 +11,6 @@ import {
 } from "../utils/cloudinary";
 import { ChatEventEnum, DEFAULT_GROUP_ICON } from "../constants";
 import { emitSocketEvent } from "../socket";
-import mongoose from "mongoose";
 import { NotificationModel } from "../models/notification.model";
 import sendNotification from "../helpers/firebase";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
@@ -59,7 +58,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, fullName, username, avatar } = req.user;
 
-  const { participants, groupName } = req.body;
+  const { participants, groupName, groupDescription } = req.body;
   if (!participants || !groupName) {
     cleanupFiles();
     throw new ApiError(400, "participants and groupName are required");
@@ -93,6 +92,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
     groupIcon,
     admin: [_id],
     isGroupChat: true,
+    description: groupDescription,
   });
 
   if (!groupChat) {
@@ -189,17 +189,19 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
   if (!chat.admin.includes(_id)) {
     throw new ApiError(403, "You are not authorized to add participants");
   }
+
   const participantsToAdd: string[] = [];
-  participants.forEach((participant: string) => {
-    const participantId = new mongoose.Schema.Types.ObjectId(participant);
-    if (!chat.users.includes(participantId)) {
+  participants.map((participant: string) => {
+    if (!chat.users.some((user) => user.toString() === participant))
       participantsToAdd.push(participant);
-    }
   });
 
-  chat.users = [...chat.users, ...participants];
-  await chat.save();
-  const participantsInfo = await chat.getParticipantsInfo(participants);
+  if (participantsToAdd.length === 0) {
+    throw new ApiError(400, "Participants already added");
+  }
+
+  await chat.updateOne({ $addToSet: { users: { $each: participantsToAdd } } });
+  const participantsInfo = await chat.getParticipantsInfo(participantsToAdd);
 
   chat.users.forEach(async (participant) => {
     const participantId = participant.toString();
@@ -208,7 +210,11 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
       participantsInfo,
       user: { fullName, avatar, username },
     });
+  });
+
+  participantsToAdd.forEach(async (participant) => {
     await NotificationModel.create({
+      entityId: chat._id,
       title: `New Group Chat`,
       description: `${username} added you to a group`,
       user: participant,
@@ -232,7 +238,7 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, chat, "Participants added successfully"));
+    .json(new ApiResponse(200, {}, "Participants added successfully"));
 });
 
 const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
@@ -255,16 +261,19 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, "You are not authorized to remove participants");
   }
 
-  participants.forEach((participant: string) => {
-    const participantId = new mongoose.Schema.Types.ObjectId(participant);
-    if (!chat.users.includes(participantId)) {
-      throw new ApiError(400, "Some participants are already not in group");
-    }
+  const participantsToRemove: string[] = [];
+  participants.map((participant: string) => {
+    if (chat.users.some((user) => user.toString() === participant))
+      participantsToRemove.push(participant);
   });
 
-  await chat.updateOne({ $pull: { users: { $in: participants } } });
+  if (participantsToRemove.length === 0) {
+    throw new ApiError(400, "Participants already removed");
+  }
 
-  const participantsInfo = await chat.getParticipantsInfo(participants);
+  await chat.updateOne({ $pull: { users: { $in: participantsToRemove } } });
+
+  const participantsInfo = await chat.getParticipantsInfo(participantsToRemove);
   chat.users.forEach((participant) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;
@@ -272,6 +281,30 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
       participantsInfo,
       user: { fullName, avatar, username },
     });
+  });
+
+  participantsToRemove.forEach(async (participant) => {
+    await NotificationModel.create({
+      entityId: chat._id,
+      title: `New Group Chat`,
+      description: `${username} removed you from a group`,
+      user: participant,
+    });
+
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: participant,
+    });
+    if (
+      notificationPreference &&
+      notificationPreference.firebaseToken &&
+      notificationPreference.pushNotifications.newGroups
+    ) {
+      sendNotification({
+        title: "New Group Chat",
+        body: `${username} removed you from a group`,
+        token: notificationPreference.firebaseToken,
+      });
+    }
   });
 
   return res
@@ -362,12 +395,18 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
   await chat.deleteMessages();
   await chat.deleteOne();
 
-  chat.users.forEach((participant) => {
+  chat.users.forEach(async (participant) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.DELETE_GROUP_EVENT, {
       chat,
       user: { fullName, avatar, username },
+    });
+    await NotificationModel.create({
+      entityId: chat._id,
+      title: "Group Deleted",
+      description: `${username} deleted the group`,
+      user: participant,
     });
   });
 
@@ -532,7 +571,7 @@ const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
 
   await chat.updateOne({ $pull: { admin: userId } }, { new: true });
 
-  const getUsersInParticipants = await chat.getParticipantsInfo([userId]);
+  const getUsersInParticipants = await chat.populate([userId]);
   chat.users.forEach((participant) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;

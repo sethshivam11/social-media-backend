@@ -31,10 +31,13 @@ const uploadToCloudinary = async (
 ) => {
   try {
     if (!localFilePath) return null;
+    const isPost =
+      type === "posts" ? { aspect_ratio: "1:1", crop: "crop" } : {};
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
       folder: `sociial/${type}`,
       upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || "sociial",
+      ...isPost,
     });
 
     fs.unlinkSync(localFilePath);
@@ -59,9 +62,13 @@ const deleteFromCloudinary = async (cloudFileLink: string) => {
     }
 
     const urlArray = cloudFileLink.split("/");
-    const publicId = urlArray[urlArray?.length - 1].split(".")[0];
+    const idx = urlArray.indexOf("sociial");
+    const publicId = urlArray
+      .slice(idx, urlArray.length)
+      .join("/")
+      .split(".")[0];
 
-    const response = await cloudinary.uploader.destroy(`sociial/${publicId}`);
+    const response = await cloudinary.uploader.destroy(publicId);
 
     if (response?.result === "ok") return true;
   } catch (err) {
