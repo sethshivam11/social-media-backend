@@ -138,28 +138,38 @@ const getChats = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, blocked } = req.user;
 
-  const privateChats = await Chat.find({
-    users: { $in: [_id], $nin: [blocked] },
-    isGroupChat: false,
-  }).populate({
-    path: "users",
-    select: "fullName username avatar",
-    model: "user",
-    strictPopulate: false,
-  });
-
-  const groupChats = await Chat.find({
+  const unfilteredChats = await Chat.find({
     users: { $in: [_id] },
-    isGroupChat: true,
-  }).populate({
-    path: "users",
-    select: "fullName username avatar",
-    model: "user",
-    strictPopulate: false,
-    options: { limit: 2 },
-  });
+  })
+    .sort({ updatedAt: -1 })
+    .populate({
+      path: "users",
+      select: "fullName username avatar",
+      model: "user",
+      strictPopulate: false,
+      options: { limit: 2 },
+    })
+    .populate({
+      path: "lastMessage",
+      select: "content kind createdAt",
+      model: "message",
+      strictPopulate: false,
+    })
 
-  const chats = [...privateChats, ...groupChats];
+  if (!unfilteredChats || !unfilteredChats.length) {
+    throw new ApiError(404, "No chats found");
+  }
+
+  const chats = unfilteredChats.filter((chat) => {
+    if (chat.isGroupChat) return true;
+    else if (
+      blocked.some((blockedUser) =>
+        chat.users.some((user) => user.toString() === blockedUser.toString())
+      )
+    )
+      return false;
+    else return true;
+  });
 
   if (!chats || !chats.length) {
     throw new ApiError(404, "No chats found");
@@ -586,6 +596,32 @@ const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, chat, "Admin removed successfully"));
 });
 
+const getMembers = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+
+  const { chatId } = req.params;
+  const chat = await Chat.findById(chatId, "users").populate({
+    path: "users",
+    select: "fullName username avatar",
+    model: "user",
+    strictPopulate: false,
+  });
+  if (!chat) {
+    throw new ApiError(404, "Chat not found");
+  }
+
+  if (!chat.users.includes(_id)) {
+    throw new ApiError(403, "You are not authorized to view members");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, chat.users, "Members fetched successfully"));
+});
+
 export {
   createOneToOneChat,
   getChats,
@@ -598,4 +634,5 @@ export {
   removeGroupIcon,
   makeAdmin,
   removeAdmin,
+  getMembers,
 };

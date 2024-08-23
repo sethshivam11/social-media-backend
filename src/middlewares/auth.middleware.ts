@@ -19,7 +19,7 @@ const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
     )) as JwtPayload;
 
     if (!decodedToken?._id) {
-      throw new ApiError(401, "Invalid token");
+      throw new ApiError(401, "Invalid token!");
     }
 
     const user = await User.findById(decodedToken._id);

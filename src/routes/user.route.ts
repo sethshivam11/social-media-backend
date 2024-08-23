@@ -20,6 +20,7 @@ import {
   updateEmail,
   searchUsers,
   getBlockedUsers,
+  getFollowSuggestions,
 } from "../controllers/user.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -67,6 +68,8 @@ router.route("/unblock").get(unblockUser);
 
 router.route("/search").get(searchUsers);
 
-router.route("/getBlocked").get(getBlockedUsers)
+router.route("/getBlocked").get(getBlockedUsers);
+
+router.route("/suggestions").get(getFollowSuggestions);
 
 export default router;

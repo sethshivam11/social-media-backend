@@ -53,7 +53,14 @@ const callDisconnectedEvent = (socket: Socket) => {
     socket.in(chatId).emit(ChatEventEnum.CALL_DISCONNECTED_EVENT, chatId);
     console.log("Call disconnected event chatId: ", chatId);
   });
-}
+};
+
+const negotiateEvent = (socket: Socket) => {
+  socket.on(ChatEventEnum.NEGOTIATE_EVENT, ({ chatId, data }) => {
+    socket.in(chatId).emit(ChatEventEnum.NEGOTIATE_EVENT, { chatId, data });
+    console.log("Negotiate event chatId: ", chatId);
+  });
+};
 
 const initializeSocket = (io: Server) => {
   return io.on("connection", async (socket: Socket) => {
@@ -89,6 +96,7 @@ const initializeSocket = (io: Server) => {
       callEvent(socket);
       callAcceptedEvent(socket);
       callDisconnectedEvent(socket);
+      negotiateEvent(socket);
 
       socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
         console.log(

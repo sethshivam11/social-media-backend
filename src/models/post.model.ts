@@ -22,6 +22,7 @@ const postSchema: Schema<PostInterface> = new Schema(
     caption: {
       type: String,
       trim: true,
+      default: "",
     },
     media: [String],
     kind: {

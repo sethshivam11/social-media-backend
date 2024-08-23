@@ -6,6 +6,7 @@ import {
   createOneToOneChat,
   deleteGroup,
   getChats,
+  getMembers,
   leaveGroup,
   makeAdmin,
   removeAdmin,
@@ -42,5 +43,7 @@ router.route("/deleteGroup/:chatId").delete(deleteGroup);
 router.route("/makeAdmin").patch(makeAdmin);
 
 router.route("/removeAdmin").patch(removeAdmin);
+
+router.route("/members/:chatId").get(getMembers);
 
 export default router;

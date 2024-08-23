@@ -33,32 +33,35 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   const { message, chatId, kind } = req.body;
 
   if (!(message || attachmentLocalFile) || !chatId) {
-    cleanupFiles();
-    throw new ApiError(400, "Message and chatId is required");
+    throw new ApiError(400, "Message or attachment and chatId is required");
   }
 
   let attachment: {
     url: string;
     kind: "image" | "video" | "audio" | "document";
-  } = {
-    url: "",
-    kind: "document",
-  };
-  const upload = await uploadToCloudinary(attachmentLocalFile.path, "messages");
-  if (upload && upload.secure_url) attachment.url = upload.secure_url;
-  switch (attachmentLocalFile.mimetype.split("/")[0]) {
-    case "image":
-      attachment.kind = "image";
-      break;
-    case "video":
-      attachment.kind = "video";
-      break;
-    case "audio":
-      attachment.kind = "audio";
-      break;
-    default:
-      attachment.kind = "document";
-      break;
+  } | null = null;
+  if (attachmentLocalFile) {
+    const upload = await uploadToCloudinary(
+      attachmentLocalFile.path,
+      "messages"
+    );
+    if (upload && upload.secure_url) {
+      attachment = { kind: "document", url: upload.secure_url };
+      switch (attachmentLocalFile.mimetype.split("/")[0]) {
+        case "image":
+          attachment.kind = "image";
+          break;
+        case "video":
+          attachment.kind = "video";
+          break;
+        case "audio":
+          attachment.kind = "audio";
+          break;
+        default:
+          attachment.kind = "document";
+          break;
+      }
+    }
   }
 
   const msg = await Message.create({
@@ -72,6 +75,16 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!msg) {
     throw new ApiError(500, "Message not sent");
   }
+
+  await Chat.findByIdAndUpdate(
+    chatId,
+    {
+      $set: {
+        lastMessage: msg._id,
+      },
+    },
+    { new: true }
+  );
 
   const chats = await fetchUsersInChat(chatId);
   if (chats) {
@@ -218,6 +231,13 @@ const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
   }
 
   await message.deleteOne();
+  await Chat.findByIdAndUpdate(
+    message.chat,
+    {
+      $set: { lastMessage: null },
+    },
+    { new: true }
+  );
 
   const chats = await fetchUsersInChat(message.chat);
   if (chats) {

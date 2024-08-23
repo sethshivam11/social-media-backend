@@ -586,7 +586,7 @@ const unblockUser = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const renewAccessToken = asyncHandler(async (req: Request, res: Response) => {
-  const { refreshToken } = req.cookies || req.body;
+  const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
   if (!refreshToken) {
     throw new ApiError(400, "Refresh token is required");
   }
@@ -596,15 +596,18 @@ const renewAccessToken = asyncHandler(async (req: Request, res: Response) => {
     process.env.REFRESH_TOKEN_SECRET as string
   )) as jwt.JwtPayload;
   if (!decodedToken?._id) {
-    throw new ApiError(401, "Invalid token");
+    res.clearCookie("refreshToken");
+    throw new ApiError(401, "Invalid token!");
   }
 
   const user = await User.findById(decodedToken._id);
   if (!user) {
+    res.clearCookie("refreshToken");
     throw new ApiError(401, "User not found");
   }
 
   if (user.refreshToken !== refreshToken) {
+    res.clearCookie("refreshToken");
     throw new ApiError(201, "Refresh token mismatch");
   }
 
@@ -613,18 +616,24 @@ const renewAccessToken = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Something went wrong, while renewing accessToken");
   }
 
+  res.clearCookie("accessToken");
+
   const newUser = removeSensitiveData(user);
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        user: newUser,
-        accessToken,
-      },
-      "Access token was renewed"
-    )
-  );
+  return res
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: newUser,
+          accessToken,
+        },
+        "Access token was renewed"
+      )
+    );
 });
 
 const isUsernameAvailable = asyncHandler(
@@ -703,6 +712,48 @@ const getBlockedUsers = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, blockedUsers.blocked, "Blocked users"));
 });
 
+const getFollowSuggestions = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new ApiError(401, "User not verified");
+    }
+    const { _id, blocked } = req.user;
+    const { max } = req.query;
+
+    const limit = parseInt(max as string) || 5;
+
+    const follow = await Follow.findOne({ user: _id });
+    if (!follow) {
+      const users = await User.find(
+        { _id: { $ne: _id, $nin: blocked } },
+        "username fullName avatar"
+      ).limit(limit);
+
+      if (!users || !users.length) {
+        throw new ApiError(404, "No users found");
+      }
+
+      return res
+        .status(200)
+        .json(new ApiResponse(200, users, "Suggestions found"));
+    }
+
+    const users = await User.find(
+      {
+        _id: { $nin: [...follow.followings, ...blocked], $ne: _id },
+      },
+      "username fullName avatar"
+    ).limit(limit);
+    if (!users || !users.length) {
+      throw new ApiError(404, "No users found");
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, users, "Suggestions found"));
+  }
+);
+
 export {
   registerUser,
   loginUser,
@@ -723,4 +774,5 @@ export {
   resendEmail,
   searchUsers,
   getBlockedUsers,
+  getFollowSuggestions,
 };

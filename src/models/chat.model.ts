@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, ObjectId } from "mongoose";
-import { User, UserInterface } from "./user.model";
+import { User } from "./user.model";
 import { DEFAULT_GROUP_ICON } from "../constants";
 import { Message } from "./message.model";
 import { deleteFromCloudinary } from "../utils/cloudinary";
@@ -11,6 +11,7 @@ interface ChatInterface extends Document {
   groupName: string;
   groupIcon: string;
   description: string;
+  lastMessage: ObjectId | null;
   getParticipantsInfo(participants: string[]): {
     _id: ObjectId;
     username: string;
@@ -47,6 +48,11 @@ const chatSchema: Schema<ChatInterface> = new Schema(
       default: DEFAULT_GROUP_ICON,
     },
     description: String,
+    lastMessage: {
+      type: Schema.Types.ObjectId,
+      ref: "message",
+      default: null,
+    },
   },
   {
     timestamps: true,
