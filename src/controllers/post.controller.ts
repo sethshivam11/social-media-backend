@@ -14,6 +14,7 @@ import { NotificationPreferences } from "../models/notificationpreferences.model
 import sendNotification from "../helpers/firebase";
 import { Follow } from "../models/follow.model";
 import { Comment } from "../models/comment.model";
+import { User } from "../models/user.model";
 
 const limit = 20;
 let pageNo = 1;
@@ -26,47 +27,25 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
 
   const { _id } = req.user;
 
-  const { caption, kind } = req.body;
+  const { caption } = req.body;
 
   const mediaFiles = req.files as File[];
   if (!mediaFiles || !mediaFiles.length) {
     cleanupFiles();
     throw new ApiError(404, "Post image or video is required");
   }
-  let media: string[] = [];
 
-  if (kind === "video") {
-    if (!mediaFiles[0].mimetype.includes("video")) {
-      cleanupFiles();
-      throw new ApiError(400, "Invalid media file type");
-    }
-
-    const upload = await uploadToCloudinary(mediaFiles[0].path, "videos");
-    if (upload && upload.secure_url) media.push(upload.secure_url);
-
-    if (!media || !media.length) {
-      throw new ApiError(
-        400,
-        "Something went wrong, while uploading post media"
-      );
-    }
-
-    const post = await Post.create({
-      user: _id,
-      caption,
-      media,
-      kind: "video",
-    });
-    await post.updatePostCount();
-
-    if (!post) {
-      throw new ApiError(400, "Something went wrong, while posting");
-    }
-
-    return res
-      .status(201)
-      .json(new ApiResponse(200, post, "Post created successfully"));
+  if (mediaFiles.some((file) => file.size > 100000000)) {
+    cleanupFiles();
+    throw new ApiError(400, "Media file size should not exceed 100MB");
   }
+
+  if (mediaFiles.some((file) => !file.mimetype.includes("image"))) {
+    cleanupFiles();
+    throw new ApiError(400, "Only image files are allowed");
+  }
+
+  let media: string[] = [];
 
   await Promise.all(
     mediaFiles.map(async (file) => {
@@ -87,6 +66,72 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
     caption,
     media,
     kind: "image",
+  });
+  await post.updatePostCount();
+
+  if (!post) {
+    throw new ApiError(400, "Something went wrong, while posting");
+  }
+
+  return res
+    .status(201)
+    .json(new ApiResponse(200, post, "Post created successfully"));
+});
+
+const createVideoPost = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+  const { caption } = req.body;
+
+  const videoFiles = req.files as File[];
+  const video = {
+    media: "",
+    thumbnail: "",
+  };
+
+  if (videoFiles.some((file) => file.size > 100000000)) {
+    cleanupFiles();
+    throw new ApiError(400, "Media file size should not exceed 100MB");
+  }
+
+  videoFiles.forEach(async (file) => {
+    file.mimetype.includes("video")
+      ? (video.media = file.path)
+      : (video.thumbnail = file.path);
+    file.mimetype.includes("image")
+      ? (video.thumbnail = file.path)
+      : (video.media = file.path);
+  });
+
+  if (!video.media || !video.thumbnail) {
+    cleanupFiles();
+    throw new ApiError(400, "Video or thumbnail files are required");
+  }
+
+  const videoUpload = await uploadToCloudinary(video.media, "videos");
+  if (videoUpload && videoUpload.secure_url) {
+    video.media = videoUpload.secure_url;
+  }
+  const uploadThumbnail = await uploadToCloudinary(video.thumbnail, "posts");
+  if (uploadThumbnail && uploadThumbnail.secure_url) {
+    video.thumbnail = uploadThumbnail.secure_url;
+  }
+
+  if (!video.media || !video.thumbnail) {
+    cleanupFiles();
+    await deleteFromCloudinary(video.media);
+    await deleteFromCloudinary(video.thumbnail);
+    throw new ApiError(400, "Something went wrong, while uploading post media");
+  }
+
+  const post = await Post.create({
+    user: _id,
+    caption,
+    media: [video.media],
+    kind: "video",
+    thumbnail: video.thumbnail,
   });
   await post.updatePostCount();
 
@@ -122,6 +167,10 @@ const deletePost = asyncHandler(async (req: Request, res: Response) => {
   await Promise.all(
     post.media.map(async (media) => deleteFromCloudinary(media))
   );
+  if (post.thumbnail) {
+    await deleteFromCloudinary(post.thumbnail || "");
+  }
+
   await Comment.deleteMany({ post: postId });
   await post.deleteOne();
 
@@ -134,10 +183,10 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { userId } = req.params;
+  const { userId, username } = req.query;
   const { page } = req.query;
-  if (!userId) {
-    throw new ApiError(400, "User id is required");
+  if (!userId && !username) {
+    throw new ApiError(400, "Username or userId is required");
   }
   if (page) {
     pageNo = parseInt(page as string);
@@ -146,9 +195,14 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  const user = await User.findOne({ $or: [{ _id: userId }, { username }] });
+  if(!user) {
+    throw new ApiError(404, "User not found");
+  }
+
   // first post with user's details
   const firstPost = await Post.findOne(
-    { user: userId },
+    { user: user._id },
     "-likes -savedBy"
   ).populate({
     path: "user",
@@ -424,70 +478,9 @@ const getLikes = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, post.likes, "Likes retrieved successfully"));
 });
 
-const savePost = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-  const { _id } = req.user;
-
-  const { postId } = req.params;
-  if (!postId) {
-    throw new ApiError(400, "Post id is required");
-  }
-
-  const post = await Post.findById(postId, "savedBy");
-  if (!post) {
-    throw new ApiError(404, "Post not found");
-  }
-
-  await post.updateOne({ $addToSet: { savedBy: _id } });
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Post saved successfully"));
-});
-
-const unsavePost = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-  const { _id } = req.user;
-
-  const { postId } = req.params;
-  if (!postId) {
-    throw new ApiError(400, "Post id is required");
-  }
-
-  const post = await Post.findById(postId, "savedBy");
-  if (!post) {
-    throw new ApiError(404, "Post not found");
-  }
-
-  await post.updateOne({ $pull: { savedBy: _id } });
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Post saved successfully"));
-});
-
-const getSavedPosts = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-  const { _id } = req.user;
-
-  const posts = await Post.find({ savedBy: { $in: [_id] } });
-  if (!posts || posts.length === 0) {
-    throw new ApiError(404, "No saved posts found");
-  }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, posts, "Saved posts retrieved successfully"));
-});
-
 export {
   createPost,
+  createVideoPost,
   deletePost,
   getUserPosts,
   createFeed,
@@ -496,7 +489,4 @@ export {
   getPost,
   explorePosts,
   getLikes,
-  getSavedPosts,
-  savePost,
-  unsavePost,
 };

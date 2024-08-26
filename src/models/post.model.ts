@@ -7,9 +7,9 @@ interface PostInterface extends Document {
   media: string[];
   kind: "image" | "video";
   likes: ObjectId[];
-  savedBy: ObjectId[];
   likesCount: number;
   commentsCount: number;
+  thumbnail?: string;
   updatePostCount(): Promise<PostInterface>;
 }
 
@@ -30,7 +30,6 @@ const postSchema: Schema<PostInterface> = new Schema(
       default: "image",
     },
     likes: [{ type: Schema.Types.ObjectId, ref: "user" }],
-    savedBy: [{ type: Schema.Types.ObjectId, ref: "user" }],
     likesCount: {
       type: Number,
       default: 0,
@@ -39,6 +38,7 @@ const postSchema: Schema<PostInterface> = new Schema(
       type: Number,
       default: 0,
     },
+    thumbnail: String,
   },
   {
     timestamps: true,

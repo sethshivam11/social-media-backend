@@ -21,6 +21,9 @@ import {
   searchUsers,
   getBlockedUsers,
   getFollowSuggestions,
+  savePost,
+  unsavePost,
+  getSavedPosts,
 } from "../controllers/user.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -42,11 +45,11 @@ router.route("/forgotPassword").post(forgotPassword);
 
 router.route("/renewAccessToken").post(renewAccessToken);
 
+router.route("/getProfile").get(getProfile);
+
 // Verified routes
 
 router.use(verifyJWT);
-
-router.route("/getProfile").get(getProfile);
 
 router.route("/get").get(getCurrentUser);
 
@@ -71,5 +74,11 @@ router.route("/search").get(searchUsers);
 router.route("/getBlocked").get(getBlockedUsers);
 
 router.route("/suggestions").get(getFollowSuggestions);
+
+router.route("/save/:postId").get(savePost);
+
+router.route("/unsave/:postId").get(unsavePost);
+
+router.route("/saved").get(getSavedPosts);
 
 export default router;

@@ -13,6 +13,7 @@ import { DEFAULT_USER_AVATAR } from "../constants";
 import sendEmail from "../helpers/mailer";
 import { Follow } from "../models/follow.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
+import { Post } from "../models/post.model";
 
 export interface File {
   fieldname: string;
@@ -173,7 +174,7 @@ const getProfile = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Username or user id is required");
   }
 
-  const user = await User.findOne({ $or: [{ username }, { userId }] });
+  const user = await User.findOne({ $or: [{ username }, { _id: userId }] });
 
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -754,6 +755,118 @@ const getFollowSuggestions = asyncHandler(
   }
 );
 
+const savePost = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+
+  const { postId } = req.params;
+  if (!postId) {
+    throw new ApiError(400, "Post id is required");
+  }
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  if (user.savedPosts.includes(post._id)) {
+    throw new ApiError(404, "Post is already saved");
+  }
+
+  await user.updateOne({ $addToSet: { savedPosts: post._id } });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        [...user.savedPosts, post._id],
+        "Post saved successfully"
+      )
+    );
+});
+
+const unsavePost = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+
+  const { postId } = req.params;
+  if (!postId) {
+    throw new ApiError(400, "Post id is required");
+  }
+
+  const post = await Post.findById(postId, "savedBy");
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (user.savedPosts.length === 0 || !user.savedPosts.includes(post._id)) {
+    throw new ApiError(404, "Post is already unsaved");
+  }
+
+  await user.updateOne({ $pull: { savedPosts: post._id } });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      user.savedPosts.filter(
+        (savedPost) => savedPost.toString() !== post._id.toString()
+      ),
+      "Post unsaved successfully"
+    )
+  );
+});
+
+const getSavedPosts = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+
+  const populatedUser = await User.findById(_id, "savedBy").populate({
+    path: "savedPosts",
+    select: "caption media thumbnail kind likesCount commentsCount",
+    model: "post",
+    strictPopulate: false,
+    populate: {
+      path: "user",
+      select: "username avatar fullName",
+      model: "user",
+      strictPopulate: false,
+    },
+  });
+  if (
+    !populatedUser ||
+    !populatedUser.savedPosts ||
+    !populatedUser.savedPosts.length
+  ) {
+    throw new ApiError(404, "No saved posts found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        populatedUser.savedPosts,
+        "Saved posts retrieved successfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -775,4 +888,7 @@ export {
   searchUsers,
   getBlockedUsers,
   getFollowSuggestions,
+  savePost,
+  unsavePost,
+  getSavedPosts,
 };

@@ -18,6 +18,7 @@ export interface UserInterface extends Document {
   refreshToken?: string;
   verifyCode: string;
   verifyCodeExpiry: Date;
+  savedPosts: ObjectId[];
   isPasswordCorrect(password: string): boolean;
   generateRefreshToken(): string;
   generateAccessToken(): string;
@@ -72,6 +73,10 @@ const userSchema: Schema<UserInterface> = new Schema(
     },
     verifyCode: String,
     verifyCodeExpiry: Date,
+    savedPosts: [{
+      type: Schema.Types.ObjectId,
+      ref: "post",
+    }],
     blocked: [
       {
         type: Schema.Types.ObjectId,

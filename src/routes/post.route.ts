@@ -3,16 +3,14 @@ import verifyJWT from "../middlewares/auth.middleware";
 import {
   createFeed,
   createPost,
+  createVideoPost,
   deletePost,
   dislikePost,
   explorePosts,
   getLikes,
   getPost,
-  getSavedPosts,
   getUserPosts,
   likePost,
-  savePost,
-  unsavePost,
 } from "../controllers/post.controller";
 import { upload } from "../middlewares/multer.middleware";
 
@@ -24,7 +22,9 @@ router.use(verifyJWT);
 
 router.route("/new").post(upload.array("media", 5), createPost);
 
-router.route("/user/:userId").get(getUserPosts);
+router.route("/video").post(upload.array("media", 2), createVideoPost);
+
+router.route("/user").get(getUserPosts);
 
 router.route("/feed").get(createFeed);
 
@@ -37,11 +37,5 @@ router.route("/dislike/:postId").get(dislikePost);
 router.route("/delete/:postId").delete(deletePost);
 
 router.route("/getLikes/:postId").get(getLikes);
-
-router.route("/saved").get(getSavedPosts);
-
-router.route("/save/:postId").get(savePost);
-
-router.route("/unsave/:postId").get(unsavePost);
 
 export default router;
