@@ -36,9 +36,16 @@ const getNotifications = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id } = req.user;
 
-  const notifications = await NotificationModel.find({ user: _id }).sort({
-    createdAt: -1,
-  });
+  const notifications = await NotificationModel.find({ user: _id })
+    .sort({
+      createdAt: -1,
+    })
+    .populate({
+      model: "user",
+      path: "user",
+      select: "username avatar fullName",
+      strictPopulate: false,
+    });
 
   if (!notifications || notifications.length === 0) {
     throw new ApiError(404, "Notification not found");

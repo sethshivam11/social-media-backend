@@ -154,19 +154,26 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getFollowers = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(400, "User not verified");
+  const { userId, username } = req.query;
+  if (!userId && !username) {
+    throw new ApiError(400, "User is required");
   }
-  const { _id } = req.user;
 
-  const follow = await Follow.findOne({ user: _id }, "followers").populate({
-    path: "followers",
-    select: "fullName username avatar",
-    model: "user",
-    strictPopulate: false,
-  });
+  const user = await User.findOne({ $or: [{ _id: userId }, { username }] });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
 
-  if (!follow) {
+  const follow = await Follow.findOne({ user: user._id }, "followers").populate(
+    {
+      path: "followers",
+      select: "fullName username avatar",
+      model: "user",
+      strictPopulate: false,
+    }
+  );
+
+  if (!follow || !follow.followers.length) {
     throw new ApiError(404, "Followers not found");
   }
 
@@ -174,19 +181,24 @@ const getFollowers = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getFollowings = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(400, "User not verified");
+  const { userId, username } = req.query;
+  if (!userId && !username) {
+    throw new ApiError(400, "User is required");
   }
-  const { _id } = req.user;
 
-  const follow = await Follow.findOne({ user: _id }, "followings").populate({
+  const user = await User.findOne({ $or: [{ _id: userId }, { username }] });
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const follow = await Follow.findOne({ user: user._id }, "followings").populate({
     path: "followings",
     select: "fullName username avatar",
     model: "user",
     strictPopulate: false,
   });
 
-  if (!follow) {
+  if (!follow || !follow.followings.length) {
     throw new ApiError(404, "Followers not found");
   }
 

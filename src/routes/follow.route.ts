@@ -9,14 +9,14 @@ import {
 
 const router = Router();
 
+router.route("/followers").get(getFollowers);
+
+router.route("/following").get(getFollowings);
+
 router.use(verifyJWT);
 
 router.route("/new").get(follow);
 
 router.route("/unfollow").get(unfollow);
-
-router.route("/followers").get(getFollowers);
-
-router.route("/following").get(getFollowings);
 
 export default router;
