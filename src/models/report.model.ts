@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, ObjectId } from "mongoose";
 
 interface ReportInterface extends Document {
-  username: ObjectId;
+  user: ObjectId;
   title: string;
   description: string;
   kind: "post" | "comment" | "user" | "chat" | "problem" | "story";
@@ -11,7 +11,7 @@ interface ReportInterface extends Document {
 
 const reportSchema: Schema<ReportInterface> = new Schema({
   entityId: { type: String, required: true },
-  username: { type: Schema.Types.ObjectId, required: true },
+  user: { type: Schema.Types.ObjectId, required: true },
   title: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },
   kind: { type: String, required: true },

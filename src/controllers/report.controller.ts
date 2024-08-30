@@ -11,6 +11,7 @@ export const createReport = asyncHandler(
       cleanupFiles();
       throw new ApiError(401, "User not verified");
     }
+    const { _id } = req.user;
 
     const { title, description, kind, entityId } = req.body;
     const imageFileLocalPath = req.file?.path;
@@ -30,7 +31,8 @@ export const createReport = asyncHandler(
       throw new ApiError(400, "Missing required fields");
     }
 
-    const report = ReportModel.create({
+    const report = await ReportModel.create({
+      user: _id,
       title,
       description,
       kind,

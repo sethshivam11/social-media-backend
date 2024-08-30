@@ -66,6 +66,12 @@ const createPost = asyncHandler(async (req: Request, res: Response) => {
     caption,
     media,
     kind: "image",
+    populate: {
+      model: "user",
+      path: "user",
+      select: "username fullName avatar",
+      strictPopulate: false,
+    },
   });
   await post.updatePostCount();
 
@@ -196,7 +202,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const user = await User.findOne({ $or: [{ _id: userId }, { username }] });
-  if(!user) {
+  if (!user) {
     throw new ApiError(404, "User not found");
   }
 
@@ -351,7 +357,7 @@ const explorePosts = asyncHandler(async (req: Request, res: Response) => {
     .populate({
       model: "user",
       path: "user",
-      select: "user fullName avatar",
+      select: "username fullName avatar",
       strictPopulate: false,
     })
     .limit(pageNo)
