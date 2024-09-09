@@ -138,6 +138,12 @@ const createVideoPost = asyncHandler(async (req: Request, res: Response) => {
     media: [video.media],
     kind: "video",
     thumbnail: video.thumbnail,
+    populate: {
+      model: "user",
+      path: "user",
+      select: "username fullName avatar",
+      strictPopulate: false,
+    },
   });
   await post.updatePostCount();
 
@@ -186,19 +192,9 @@ const deletePost = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
   const { userId, username } = req.query;
-  const { page } = req.query;
   if (!userId && !username) {
     throw new ApiError(400, "Username or userId is required");
-  }
-  if (page) {
-    pageNo = parseInt(page as string);
-    if (pageNo <= 0) {
-      pageNo = 1;
-    }
   }
 
   const user = await User.findOne({ $or: [{ _id: userId }, { username }] });
@@ -207,10 +203,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // first post with user's details
-  const firstPost = await Post.findOne(
-    { user: user._id },
-    "-likes -savedBy"
-  ).populate({
+  const firstPost = await Post.findOne({ user: user._id }).populate({
     path: "user",
     model: "user",
     select: "username fullName avatar followingCount followersCount postsCount",
@@ -222,10 +215,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // rest posts without user's details
-  const restPosts = await Post.find({ user: userId })
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .skip(pageNo === 1 ? 1 : (pageNo - 1) * limit);
+  const restPosts = await Post.find({ user: userId }).sort({ createdAt: -1 });
 
   const posts = [firstPost, ...(restPosts || [])];
 
@@ -238,14 +228,6 @@ const getPost = asyncHandler(async (req: Request, res: Response) => {
   const { postId } = req.params;
   if (!postId) {
     throw new ApiError(400, "Post id is required");
-  }
-
-  const { page } = req.query;
-  if (page) {
-    pageNo = parseInt(page as string);
-    if (pageNo <= 0) {
-      pageNo = 1;
-    }
   }
 
   const post = await Post.findById(postId).populate({
@@ -290,6 +272,8 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
     if (pageNo <= 0) {
       pageNo = 1;
     }
+  } else {
+    pageNo = 1;
   }
 
   const follow = await Follow.findOne({ user: _id });
@@ -309,6 +293,7 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
       select: "username avatar fullName",
       strictPopulate: false,
     })
+    .sort("-createdAt")
     .limit(limit)
     .skip((pageNo - 1) * limit);
 
@@ -329,53 +314,183 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
-const explorePosts = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-  const { _id, blocked } = req.user;
-  const { page } = req.query;
+const videoFeed = asyncHandler(async (req: Request, res: Response) => {
+  const { page, userId } = req.query;
 
-  const follow = await Follow.findOne({ user: _id });
-  const followings = follow?.followings || [];
+  const data: {
+    posts: object[];
+    max: number;
+    page: number;
+  } = {
+    posts: [],
+    max: 0,
+    page: pageNo,
+  };
 
   if (page) {
     pageNo = parseInt(page as string);
     if (pageNo <= 0) {
       pageNo = 1;
     }
+  } else {
+    pageNo = 1;
   }
 
-  const totalCount = await Post.countDocuments({
-    user: { $nin: [...followings, _id, ...blocked] },
-  });
+  const user = await User.findById(userId || null);
+  if (user) {
+    const { _id, blocked } = user;
 
-  // Get posts of the users that the logged in user is not following
-  const posts = await Post.find({
-    user: { $nin: [...followings, _id, ...blocked] },
-  })
-    .populate({
-      model: "user",
-      path: "user",
-      select: "username fullName avatar",
-      strictPopulate: false,
+    const totalCount = await Post.countDocuments({
+      user: { $nin: [...blocked, _id] },
+      kind: "video",
+    });
+
+    const posts = await Post.find({
+      user: { $nin: [...blocked, _id] },
+      kind: "video",
     })
-    .limit(pageNo)
-    .skip((pageNo - 1) * limit);
+      .populate({
+        model: "user",
+        path: "user",
+        select: "username fullName avatar",
+        strictPopulate: false,
+      })
+      .limit(limit)
+      .skip((pageNo - 1) * limit);
 
-  if (!posts || posts.length === 0) {
-    throw new ApiError(404, "No posts found");
+    if (!posts || posts.length === 0) {
+      throw new ApiError(404, "No posts found");
+    }
+
+    data.posts = posts;
+    data.max = totalCount;
+  } else {
+    const totalCount = await Post.countDocuments({
+      kind: "video",
+    });
+
+    const posts = await Post.find({
+      kind: "video",
+    })
+      .populate({
+        model: "user",
+        path: "user",
+        select: "username avatar fullName",
+        strictPopulate: false,
+      })
+      .limit(limit)
+      .skip((pageNo - 1) * limit);
+
+    if (!posts || posts.length === 0) {
+      throw new ApiError(404, "No posts found");
+    }
+
+    data.posts = posts;
+    data.max = totalCount;
   }
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { posts, max: totalCount, page: pageNo },
-        "Posts retrieved successfully"
-      )
-    );
+    .json(new ApiResponse(200, data, "Posts retrieved successfully"));
+});
+
+const getVideoPost = asyncHandler(async (req: Request, res: Response) => {
+  const { postId } = req.params;
+  if (!postId) {
+    throw new ApiError(400, "Post id is required");
+  }
+
+  const post = await Post.findById(postId).populate({
+    model: "user",
+    path: "user",
+    select: "username fullName avatar",
+    strictPopulate: false,
+  });
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, post, "Video retrieved successfully"));
+});
+
+const explorePosts = asyncHandler(async (req: Request, res: Response) => {
+  const { page, userId } = req.query;
+  if (page) {
+    pageNo = parseInt(page as string);
+    if (pageNo <= 0) {
+      pageNo = 1;
+    }
+  } else {
+    pageNo = 1;
+  }
+
+  const data: {
+    posts: object[];
+    max: number;
+    page: number;
+  } = {
+    posts: [],
+    max: 0,
+    page: pageNo,
+  };
+
+  const user = await User.findById(userId || null);
+  if (user) {
+    const { _id, blocked } = user;
+    const follow = await Follow.findOne({ user: _id });
+    const followings = follow?.followings || [];
+
+    const totalCount = await Post.countDocuments({
+      user: { $nin: [...followings, _id, ...blocked] },
+    });
+
+    // Get posts of the users that the logged in user is not following
+    const posts = await Post.find({
+      user: { $nin: [...followings, _id, ...blocked] },
+    })
+      .populate({
+        model: "user",
+        path: "user",
+        select: "username fullName avatar",
+        strictPopulate: false,
+      })
+      .sort("-createdAt")
+      .limit(pageNo)
+      .skip((pageNo - 1) * limit);
+
+    if (!posts || posts.length === 0) {
+      throw new ApiError(404, "No posts found");
+    }
+
+    data.posts = posts;
+    data.max = totalCount;
+  } else {
+    const totalCount = await Post.countDocuments();
+
+    const posts = await Post.find()
+      .populate({
+        model: "user",
+        path: "user",
+        select: "username fullName avatar",
+        strictPopulate: false,
+      })
+      .sort("-createdAt")
+      .limit(limit)
+      .skip((pageNo - 1) * limit);
+
+    if (!posts || posts.length === 0) {
+      throw new ApiError(404, "No posts found");
+    }
+
+    data.posts = posts;
+    data.max = totalCount;
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, data, "Posts retrieved successfully"));
 });
 
 const likePost = asyncHandler(async (req: Request, res: Response) => {
@@ -491,6 +606,8 @@ export {
   getUserPosts,
   createFeed,
   likePost,
+  videoFeed,
+  getVideoPost,
   dislikePost,
   getPost,
   explorePosts,

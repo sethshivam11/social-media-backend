@@ -136,40 +136,67 @@ const getChats = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
+
   const { _id, blocked } = req.user;
 
-  const unfilteredChats = await Chat.find({
-    users: { $in: [_id] },
-  })
-    .sort({ updatedAt: -1 })
-    .populate({
-      path: "users",
-      select: "fullName username avatar",
-      model: "user",
-      strictPopulate: false,
-      options: { limit: 2 },
-    })
-    .populate({
-      path: "lastMessage",
-      select: "content kind createdAt",
-      model: "message",
-      strictPopulate: false,
-    })
-
-  if (!unfilteredChats || !unfilteredChats.length) {
-    throw new ApiError(404, "No chats found");
-  }
-
-  const chats = unfilteredChats.filter((chat) => {
-    if (chat.isGroupChat) return true;
-    else if (
-      blocked.some((blockedUser) =>
-        chat.users.some((user) => user.toString() === blockedUser.toString())
-      )
-    )
-      return false;
-    else return true;
-  });
+  const chats = await Chat.aggregate([
+    { $match: { users: { $in: [_id] } } },
+    { $sort: { updatedAt: -1 } },
+    {
+      $lookup: {
+        from: "users",
+        localField: "users",
+        foreignField: "_id",
+        as: "users",
+        pipeline: [
+          {
+            $project: { avatar: 1, username: 1, fullName: 1 },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "messages",
+        localField: "lastMessage",
+        foreignField: "_id",
+        as: "lastMessage",
+        pipeline: [
+          {
+            $project: { content: 1, createdAt: 1 },
+          },
+        ],
+      },
+    },
+    { $unwind: { path: "$lastMessage", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        user: {
+          $cond: {
+            if: { $eq: ["$isGroupChat", false] },
+            then: {
+              $filter: {
+                input: "$users",
+                as: "user",
+                cond: {
+                  $and: [
+                    { $ne: ["$$user._id", _id] },
+                    { $not: { $in: ["$$user._id", blocked] } },
+                  ],
+                },
+              },
+            },
+            else: "$users",
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        "users.password": 0,
+      },
+    },
+  ]);
 
   if (!chats || !chats.length) {
     throw new ApiError(404, "No chats found");

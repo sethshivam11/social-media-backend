@@ -32,4 +32,4 @@ export const DEFAULT_USER_AVATAR =
   "https://res.cloudinary.com/dv3qbj0bn/image/upload/v1723483837/sociial/settings/r5pvoicvcxtyhjkgqk8y.png";
 
 export const DEFAULT_GROUP_ICON =
-  "https://res.cloudinary.com/dv3qbj0bn/image/upload/v1723483856/sociial/settings/feahtus4algwiixi0zmi.png";
+  "https://res.cloudinary.com/dv3qbj0bn/image/upload/v1725736840/sociial/settings/feahtus4algwiixi0zmi.png";

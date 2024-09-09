@@ -32,7 +32,9 @@ const uploadToCloudinary = async (
   try {
     if (!localFilePath) return null;
     const isPost =
-      type === "posts" ? { aspect_ratio: "1:1", crop: "crop" } : {};
+      type === "posts" || type === "avatars"
+        ? { aspect_ratio: "1:1", crop: "crop" }
+        : {};
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
       folder: `sociial/${type}`,
