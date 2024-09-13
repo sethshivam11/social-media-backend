@@ -478,15 +478,7 @@ const updateDetails = asyncHandler(async (req: Request, res: Response) => {
 
   await user.save({ validateBeforeSave: false });
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { bio: user.bio, fullName: user.fullName },
-        "User details updated"
-      )
-    );
+  return res.status(200).json(new ApiResponse(200, {}, "User details updated"));
 });
 
 const blockUser = asyncHandler(async (req: Request, res: Response) => {

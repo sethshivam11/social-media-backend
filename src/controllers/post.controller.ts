@@ -457,7 +457,7 @@ const explorePosts = asyncHandler(async (req: Request, res: Response) => {
         strictPopulate: false,
       })
       .sort("-createdAt")
-      .limit(pageNo)
+      .limit(limit)
       .skip((pageNo - 1) * limit);
 
     if (!posts || posts.length === 0) {

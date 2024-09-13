@@ -54,6 +54,7 @@ const userSchema: Schema<UserInterface> = new Schema(
     },
     bio: {
       type: String,
+      default: "",
     },
     followingCount: {
       type: Number,
@@ -73,10 +74,12 @@ const userSchema: Schema<UserInterface> = new Schema(
     },
     verifyCode: String,
     verifyCodeExpiry: Date,
-    savedPosts: [{
-      type: Schema.Types.ObjectId,
-      ref: "post",
-    }],
+    savedPosts: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "post",
+      },
+    ],
     blocked: [
       {
         type: Schema.Types.ObjectId,
