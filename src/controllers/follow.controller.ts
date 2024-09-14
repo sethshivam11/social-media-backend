@@ -57,13 +57,16 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
     });
     if (
       notificationPreference &&
-      notificationPreference.firebaseToken &&
+      notificationPreference.firebaseTokens &&
+      notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.newFollowers
     ) {
-      sendNotification({
-        title: "New Follower",
-        body: `${currentUser.username} started following you`,
-        token: notificationPreference.firebaseToken,
+      notificationPreference.firebaseTokens.forEach((token) => {
+        sendNotification({
+          title: "New Follower",
+          body: `${currentUser.username} started following you`,
+          token,
+        });
       });
     }
 
@@ -91,13 +94,16 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
     });
     if (
       notificationPreference &&
-      notificationPreference.firebaseToken &&
+      notificationPreference.firebaseTokens &&
+      notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.newFollowers
     ) {
-      sendNotification({
-        title: "New Follower",
-        body: `${currentUser.username} started following you`,
-        token: notificationPreference.firebaseToken,
+      notificationPreference.firebaseTokens.forEach((token) => {
+        sendNotification({
+          title: "New Follower",
+          body: `${currentUser.username} started following you`,
+          token,
+        });
       });
     }
 
@@ -191,7 +197,10 @@ const getFollowings = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
-  const follow = await Follow.findOne({ user: user._id }, "followings").populate({
+  const follow = await Follow.findOne(
+    { user: user._id },
+    "followings"
+  ).populate({
     path: "followings",
     select: "fullName username avatar",
     model: "user",

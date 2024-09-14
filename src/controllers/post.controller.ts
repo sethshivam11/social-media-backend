@@ -515,26 +515,32 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
     post.save();
   }
 
-  await NotificationModel.create({
-    title: `Post Liked`,
-    entityId: postId,
-    description: `${username} liked your post`,
-    user: post.user,
-  });
+  if (post.user.toString() !== _id.toString()) {
+    await NotificationModel.create({
+      title: `Post Liked`,
+      entityId: postId,
+      description: `${username} liked your post`,
+      user: post.user,
+    });
+  }
 
   const notificationPreference = await NotificationPreferences.findOne({
     user: post.user,
   });
   if (
     notificationPreference &&
-    notificationPreference.firebaseToken &&
-    notificationPreference.pushNotifications.likes
+    notificationPreference.firebaseTokens &&
+    notificationPreference.firebaseTokens.length &&
+    notificationPreference.pushNotifications.likes &&
+    notificationPreference.user !== post.user
   ) {
-    sendNotification({
-      title: "Post Liked",
-      body: `${username} liked your post`,
-      token: notificationPreference.firebaseToken,
-      image: avatar,
+    notificationPreference.firebaseTokens.forEach((token) => {
+      sendNotification({
+        title: "Post Liked",
+        body: `${username} liked your post`,
+        token,
+        image: avatar,
+      });
     });
   }
 

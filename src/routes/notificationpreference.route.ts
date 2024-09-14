@@ -1,19 +1,27 @@
 import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
 import {
+  deleteFirebaseToken,
   getNotificationPreferences,
   saveFirebaseToken,
+  updateFirebaseToken,
   updateNotificationPreferences,
 } from "../controllers/notificationpreferences.controller";
 
 const router = Router();
 
-router.route("/saveToken").post(verifyJWT, saveFirebaseToken);
+router.use(verifyJWT);
+
+router.route("/saveToken").post(saveFirebaseToken);
 
 router
   .route("/updatePreferences")
-  .put(verifyJWT, updateNotificationPreferences);
+  .put(updateNotificationPreferences);
 
-router.route("/get").get(verifyJWT, getNotificationPreferences);
+router.route("/updateToken").patch(updateFirebaseToken);
+
+router.route("/deleteToken/:token").delete(deleteFirebaseToken); 
+
+router.route("/get").get(getNotificationPreferences);
 
 export default router;

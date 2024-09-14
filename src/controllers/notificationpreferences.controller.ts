@@ -25,8 +25,12 @@ const saveFirebaseToken = asyncHandler(async (req: Request, res: Response) => {
       .status(200)
       .json(new ApiResponse(200, {}, "Token saved successfully"));
   }
-
-  savedNotificationPreferences.firebaseToken = token;
+  if (!savedNotificationPreferences.firebaseTokens.includes(token)) {
+    savedNotificationPreferences.firebaseTokens = [
+      ...savedNotificationPreferences.firebaseTokens,
+      token,
+    ];
+  }
 
   return res
     .status(200)
@@ -157,8 +161,67 @@ const updateNotificationPreferences = asyncHandler(
   }
 );
 
+const updateFirebaseToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new ApiError(401, "User not verified");
+    }
+    const { _id } = req.user;
+    const { prevToken, newToken } = req.body;
+
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: _id,
+    });
+    if (!notificationPreference) {
+      throw new ApiError(400, "Notification preferences not found");
+    }
+
+    notificationPreference.firebaseTokens =
+      notificationPreference.firebaseTokens.map((token) => {
+        if (token === prevToken) {
+          return newToken;
+        }
+        return token;
+      });
+
+    notificationPreference.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Firebase token updated successfully"));
+  }
+);
+
+const deleteFirebaseToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new ApiError(401, "User not verified");
+    }
+    const { _id } = req.user;
+    const { token } = req.params;
+
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: _id,
+    });
+    if (!notificationPreference) {
+      throw new ApiError(404, "Notification preferences not found");
+    }
+
+    notificationPreference.firebaseTokens.filter(
+      (prevToken) => prevToken !== token
+    );
+    notificationPreference.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Firebase token deleted successfully"));
+  }
+);
+
 export {
   saveFirebaseToken,
+  updateFirebaseToken,
   getNotificationPreferences,
   updateNotificationPreferences,
+  deleteFirebaseToken,
 };

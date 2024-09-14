@@ -295,18 +295,24 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const { _id } = req.user;
+  const { firebaseToken } = req.query;
 
   const user = await User.findById(_id);
   if (!user) {
     throw new ApiError(404, "User not found");
   }
 
-  const notificationPreference = await NotificationPreferences.findOne({
-    user: _id,
-  });
-  if (notificationPreference) {
-    notificationPreference.firebaseToken = null;
-    await notificationPreference.save();
+  if (firebaseToken) {
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: _id,
+    });
+    if (notificationPreference) {
+      notificationPreference.firebaseTokens =
+        notificationPreference?.firebaseTokens.filter(
+          (token) => token === firebaseToken
+        );
+      await notificationPreference.save();
+    }
   }
 
   user.refreshToken = "";
@@ -642,6 +648,12 @@ const isUsernameAvailable = asyncHandler(
     }
     if (username.trim() && !/^[a-z_1-9.]+$/.test(username)) {
       throw new ApiError(400, "Username must contain only lowercase, ., _");
+    }
+    if (/^\d/.test(username)) {
+      throw new ApiError(400, "Username cannot start with a number");
+    }
+    if (!/[a-z]/.test(username)) {
+      throw new ApiError(400, "Username must contain at least one letter");
     }
     if (username.startsWith(".")) {
       throw new ApiError(400, "Username cannot start with a .");

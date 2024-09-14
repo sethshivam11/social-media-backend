@@ -2,7 +2,7 @@ import mongoose, { ObjectId, Schema } from "mongoose";
 
 interface NotificationPreferencesInterface extends Document {
   user: ObjectId;
-  firebaseToken: string | null;
+  firebaseTokens: string[];
   pushNotifications: {
     likes: boolean;
     comments: boolean;
@@ -27,9 +27,9 @@ const NotificationPreferencesSchema: Schema<NotificationPreferencesInterface> =
         required: true,
         ref: "user",
       },
-      firebaseToken: {
-        type: String,
-        default: null,
+      firebaseTokens: {
+        type: [String],
+        default: [],
       },
       pushNotifications: {
         likes: {

@@ -105,24 +105,29 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
       username,
       avatar,
     });
-    await NotificationModel.create({
-      title: `New Group Chat`,
-      description: `${username} added you to a group`,
-      user: participant,
-    });
+    if (participant !== _id) {
+      await NotificationModel.create({
+        title: `New Group Chat`,
+        description: `${username} added you to a group`,
+        user: participant,
+      });
+    }
 
     const notificationPreference = await NotificationPreferences.findOne({
       user: participant,
     });
     if (
       notificationPreference &&
-      notificationPreference.firebaseToken &&
+      notificationPreference.firebaseTokens &&
+      notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.newGroups
     ) {
-      sendNotification({
-        title: "New Group Chat",
-        body: `${username} added you to a group`,
-        token: notificationPreference.firebaseToken,
+      notificationPreference.firebaseTokens.forEach((token) => {
+        sendNotification({
+          title: "New Group Chat",
+          body: `${username} added you to a group`,
+          token,
+        });
       });
     }
   });
@@ -262,13 +267,16 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
     });
     if (
       notificationPreference &&
-      notificationPreference.firebaseToken &&
+      notificationPreference.firebaseTokens &&
+      notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.newGroups
     ) {
-      sendNotification({
-        title: "New Group Chat",
-        body: `${username} added you to a group`,
-        token: notificationPreference.firebaseToken,
+      notificationPreference.firebaseTokens.forEach((token) => {
+        sendNotification({
+          title: "New Group Chat",
+          body: `${username} added you to a group`,
+          token,
+        });
       });
     }
   });
@@ -333,13 +341,16 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
     });
     if (
       notificationPreference &&
-      notificationPreference.firebaseToken &&
+      notificationPreference.firebaseTokens &&
+      notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.newGroups
     ) {
-      sendNotification({
-        title: "New Group Chat",
-        body: `${username} removed you from a group`,
-        token: notificationPreference.firebaseToken,
+      notificationPreference.firebaseTokens.forEach((token) => {
+        sendNotification({
+          title: "New Group Chat",
+          body: `${username} removed you from a group`,
+          token,
+        });
       });
     }
   });
@@ -439,12 +450,14 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
       chat,
       user: { fullName, avatar, username },
     });
-    await NotificationModel.create({
-      entityId: chat._id,
-      title: "Group Deleted",
-      description: `${username} deleted the group`,
-      user: participant,
-    });
+    if (participantId !== _id.toString()) {
+      await NotificationModel.create({
+        entityId: chat._id,
+        title: "Group Deleted",
+        description: `${username} deleted the group`,
+        user: participant,
+      });
+    }
   });
 
   return res

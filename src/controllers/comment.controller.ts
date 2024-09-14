@@ -41,13 +41,16 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
   });
   if (
     notificationPreference &&
-    notificationPreference.firebaseToken &&
+    notificationPreference.firebaseTokens &&
+    notificationPreference.firebaseTokens.length &&
     notificationPreference.pushNotifications.comments
   ) {
-    sendNotification({
-      title: "New Comment",
-      body: `${username} commented on your post`,
-      token: notificationPreference?.firebaseToken,
+    notificationPreference.firebaseTokens.forEach((token) => {
+      sendNotification({
+        title: "New Comment",
+        body: `${username} commented on your post`,
+        token,
+      });
     });
   }
 
@@ -134,26 +137,31 @@ const likeComment = asyncHandler(async (req: Request, res: Response) => {
     comment.likes = [...comment.likes, _id];
     comment.likesCount = (comment.likesCount as number) + 1;
 
-    await NotificationModel.create({
-      title: `Comment Liked`,
-      entityId: commentId,
-      description: `Your comment was liked by @${username}`,
-      user: comment.user,
-      link: `/posts/${comment.post}`,
-    });
+    if (comment.user.toString() !== _id.toString()) {
+      await NotificationModel.create({
+        title: `Comment Liked`,
+        entityId: commentId,
+        description: `Your comment was liked by @${username}`,
+        user: comment.user,
+        link: `/posts/${comment.post}`,
+      });
+    }
 
     const notificationPreference = await NotificationPreferences.findOne({
       user: comment.user,
     });
     if (
       notificationPreference &&
-      notificationPreference.firebaseToken &&
+      notificationPreference.firebaseTokens &&
+      notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.commentLikes
     ) {
-      sendNotification({
-        title: "New Group Chat",
-        body: `${username} added you to a group`,
-        token: notificationPreference.firebaseToken,
+      notificationPreference.firebaseTokens.forEach((token) => {
+        sendNotification({
+          title: "New Group Chat",
+          body: `${username} added you to a group`,
+          token,
+        });
       });
     }
   }

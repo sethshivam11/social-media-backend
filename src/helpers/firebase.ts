@@ -1,4 +1,6 @@
 import admin from "firebase-admin";
+import { FirebaseMessagingError } from "firebase-admin/lib/utils/error";
+import { NotificationPreferences } from "../models/notificationpreferences.model";
 
 interface PushNotification {
   title: string;
@@ -30,6 +32,19 @@ const sendNotification = async ({
     });
   } catch (error) {
     console.log("Error sending notification", error);
+
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error.code === "messaging/invalid-registration-token" ||
+        error.code === "messaging/registration-token-not-registered")
+    ) {
+      console.log("Invalid or expired token. Removing token:", token);
+
+      await NotificationPreferences.findOneAndUpdate({
+        $pull: { firebaseTokens: token },
+      });
+    }
   }
 };
 

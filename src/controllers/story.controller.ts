@@ -212,25 +212,31 @@ const likeStory = asyncHandler(async (req: Request, res: Response) => {
   await story.updateOne({ $push: { likes: _id } }, { new: true });
   story.likes = [...story.likes, _id];
 
-  await NotificationModel.create({
-    title: `Story Liked`,
-    description: `${_id} liked your story`,
-    user: story.user,
-  });
+  if (story.user.toString() === _id.toString()) {
+    await NotificationModel.create({
+      title: `Story Liked`,
+      description: `${_id} liked your story`,
+      user: story.user,
+      entityId: story._id,
+    });
+  }
 
   const notificationPreference = await NotificationPreferences.findOne({
     user: story.user,
   });
   if (
     notificationPreference &&
-    notificationPreference.firebaseToken &&
+    notificationPreference.firebaseTokens &&
+    notificationPreference.firebaseTokens.length &&
     notificationPreference.pushNotifications.storyLikes
   ) {
-    sendNotification({
-      title: "Story Liked`,",
-      body: `${_id} liked your story`,
-      token: notificationPreference.firebaseToken,
-      image: avatar,
+    notificationPreference.firebaseTokens.forEach((token) => {
+      sendNotification({
+        title: "Story Liked`,",
+        body: `${_id} liked your story`,
+        token,
+        image: avatar,
+      });
     });
   }
 
@@ -254,9 +260,10 @@ const unlikeStory = asyncHandler(async (req: Request, res: Response) => {
   }
 
   await story.updateOne({ $pull: { likes: _id } }, { new: true });
-  await NotificationModel.create({
+  await NotificationModel.findOneAndDelete({
     title: `Story Liked`,
     user: story.user,
+    entityId: story._id
   });
 
   return res.status(200).json(new ApiResponse(200, {}, "Story unliked"));
