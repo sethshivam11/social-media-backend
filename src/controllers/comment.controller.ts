@@ -8,15 +8,17 @@ import { NotificationPreferences } from "../models/notificationpreferences.model
 import sendNotification from "../helpers/firebase";
 
 const getAllComments = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
   const { postId } = req.params;
   if (!postId) {
     throw new ApiError(400, "Post id is required");
   }
 
-  const comments = await Comment.find({ post: postId });
+  const comments = await Comment.find({ post: postId }).populate({
+    path: "user",
+    model: "user",
+    select: "username avatar fullName",
+    strictPopulate: false,
+  });
   if (!comments || comments.length === 0) {
     throw new ApiError(404, "No comments found");
   }
@@ -30,9 +32,9 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, username } = req.user;
-  const { postId, comment } = req.body;
-  if (!postId || !comment) {
+  const { _id, username, avatar, fullName } = req.user;
+  const { postId, content } = req.body;
+  if (!postId || !content) {
     throw new ApiError(400, "Post id and comment are required");
   }
 
@@ -54,12 +56,12 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  const newComment = await Comment.create({
+  const comment = await Comment.create({
     post: postId,
     user: _id,
-    content: comment,
+    content,
   });
-  if (!newComment) {
+  if (!comment) {
     throw new ApiError(400, "Something went wrong, while creating comment");
   }
 
@@ -67,16 +69,22 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
     title: "New Comment",
     description: `${username} commented on your post`,
     user: _id,
-    entityId: newComment._id,
+    entityId: comment._id,
     link: `/posts/${postId}`,
     type: "comment",
   });
 
-  await newComment.updateCommentsCount(postId, 1);
+  await comment.updateCommentsCount(postId, 1);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, newComment, "Comment created successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { ...comment.toObject(), user: { _id, username, avatar, fullName } },
+        "Comment created successfully"
+      )
+    );
 });
 
 const deleteComment = asyncHandler(async (req: Request, res: Response) => {
@@ -208,10 +216,37 @@ const dislikeComment = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, comment, "Comment disliked successfully"));
 });
 
+const getCommentLikes = asyncHandler(async (req: Request, res: Response) => {
+  const { commentId } = req.params;
+  if (!commentId) {
+    throw new ApiError(400, "Comment id is required");
+  }
+
+  const comment = await Comment.findOne({ _id: commentId }).populate({
+    path: "likes",
+    model: "user",
+    select: "username avatar fullName",
+    strictPopulate: false,
+  });
+
+  if (!comment) {
+    throw new ApiError(404, "Comment not found");
+  }
+
+  if (!comment.likes || !comment.likes.length) {
+    throw new ApiError(404, "No likes found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, comment.likes, "Likes retrieved successfully"));
+});
+
 export {
   getAllComments,
   createComment,
   deleteComment,
   likeComment,
   dislikeComment,
+  getCommentLikes,
 };

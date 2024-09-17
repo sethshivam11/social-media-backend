@@ -1,19 +1,28 @@
 import { Router } from "express";
-import { createComment, deleteComment, dislikeComment, getAllComments, likeComment } from "../controllers/comment.controller";
+import {
+  createComment,
+  deleteComment,
+  dislikeComment,
+  getAllComments,
+  getCommentLikes,
+  likeComment,
+} from "../controllers/comment.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
-const router = Router()
+const router = Router();
 
-router.use(verifyJWT)
+router.route("/:postId").get(getAllComments);
 
-router.route("/:postId").get(getAllComments)
+router.route("/likes/:commentId").get(getCommentLikes);
 
-router.route("/new").post(createComment)
+router.use(verifyJWT);
 
-router.route("/like/:commentId").get(likeComment)
+router.route("/new").post(createComment);
 
-router.route("/dislike/:commentId").get(dislikeComment)
+router.route("/like/:commentId").get(likeComment);
 
-router.route("/delete/:commentId").delete(deleteComment)
+router.route("/dislike/:commentId").get(dislikeComment);
 
-export default router
+router.route("/delete/:commentId").delete(deleteComment);
+
+export default router;

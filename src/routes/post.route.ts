@@ -24,13 +24,13 @@ router.route("/user").get(getUserPosts);
 
 router.route("/exploreFeed").get(explorePosts);
 
-router.route("/videoFeed").get(videoFeed);
-
 router.route("/videoPost/:postId").get(getVideoPost);
 
 router.route("/getLikes/:postId").get(getLikes);
 
 router.use(verifyJWT);
+
+router.route("/videoFeed").get(videoFeed);
 
 router.route("/new").post(upload.array("media", 5), createPost);
 

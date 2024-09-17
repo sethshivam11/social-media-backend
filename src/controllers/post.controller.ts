@@ -315,17 +315,11 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const videoFeed = asyncHandler(async (req: Request, res: Response) => {
-  const { page, userId } = req.query;
-
-  const data: {
-    posts: object[];
-    max: number;
-    page: number;
-  } = {
-    posts: [],
-    max: 0,
-    page: pageNo,
-  };
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id, blocked } = req.user;
+  const { page } = req.query;
 
   if (page) {
     pageNo = parseInt(page as string);
@@ -336,62 +330,35 @@ const videoFeed = asyncHandler(async (req: Request, res: Response) => {
     pageNo = 1;
   }
 
-  const user = await User.findById(userId || null);
-  if (user) {
-    const { _id, blocked } = user;
+  const totalCount = await Post.countDocuments({
+    user: { $nin: [...blocked, _id] },
+    kind: "video",
+  });
 
-    const totalCount = await Post.countDocuments({
-      user: { $nin: [...blocked, _id] },
-      kind: "video",
-    });
-
-    const posts = await Post.find({
-      user: { $nin: [...blocked, _id] },
-      kind: "video",
+  const posts = await Post.find({
+    user: { $nin: [...blocked, _id] },
+    kind: "video",
+  })
+    .populate({
+      model: "user",
+      path: "user",
+      select: "username fullName avatar",
+      strictPopulate: false,
     })
-      .populate({
-        model: "user",
-        path: "user",
-        select: "username fullName avatar",
-        strictPopulate: false,
-      })
-      .limit(limit)
-      .skip((pageNo - 1) * limit);
+    .limit(limit)
+    .skip((pageNo - 1) * limit);
 
-    if (!posts || posts.length === 0) {
-      throw new ApiError(404, "No posts found");
-    }
-
-    data.posts = posts;
-    data.max = totalCount;
-  } else {
-    const totalCount = await Post.countDocuments({
-      kind: "video",
-    });
-
-    const posts = await Post.find({
-      kind: "video",
-    })
-      .populate({
-        model: "user",
-        path: "user",
-        select: "username avatar fullName",
-        strictPopulate: false,
-      })
-      .limit(limit)
-      .skip((pageNo - 1) * limit);
-
-    if (!posts || posts.length === 0) {
-      throw new ApiError(404, "No posts found");
-    }
-
-    data.posts = posts;
-    data.max = totalCount;
+  if (!posts || posts.length === 0) {
+    throw new ApiError(404, "No posts found");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, data, "Posts retrieved successfully"));
+    .json(new ApiResponse(200, {
+      posts,
+      pageNo,
+      max: totalCount,
+    }, "Posts retrieved successfully"));
 });
 
 const getVideoPost = asyncHandler(async (req: Request, res: Response) => {
