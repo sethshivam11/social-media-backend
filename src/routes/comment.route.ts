@@ -2,7 +2,7 @@ import { Router } from "express";
 import {
   createComment,
   deleteComment,
-  dislikeComment,
+  unlikeComment,
   getAllComments,
   getCommentLikes,
   likeComment,
@@ -21,7 +21,7 @@ router.route("/new").post(createComment);
 
 router.route("/like/:commentId").get(likeComment);
 
-router.route("/dislike/:commentId").get(dislikeComment);
+router.route("/unlike/:commentId").get(unlikeComment);
 
 router.route("/delete/:commentId").delete(deleteComment);
 

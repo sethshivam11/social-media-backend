@@ -137,49 +137,50 @@ const likeComment = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Comment not found");
   }
 
-  if (!comment.likes.includes(_id)) {
-    await comment.updateOne(
-      { $push: { likes: _id }, $inc: { likesCount: 1 } },
-      { new: true }
-    );
-    comment.likes = [...comment.likes, _id];
-    comment.likesCount = (comment.likesCount as number) + 1;
+  if (comment.likes.includes(_id)) {
+    throw new ApiError(400, "You have already liked this comment");
+  }
+  await comment.updateOne(
+    { $push: { likes: _id }, $inc: { likesCount: 1 } },
+    { new: true }
+  );
+  comment.likes = [...comment.likes, _id];
+  comment.likesCount = (comment.likesCount as number) + 1;
 
-    if (comment.user.toString() !== _id.toString()) {
-      await NotificationModel.create({
-        title: `Comment Liked`,
-        entityId: commentId,
-        description: `Your comment was liked by @${username}`,
-        user: comment.user,
-        link: `/posts/${comment.post}`,
-      });
-    }
-
-    const notificationPreference = await NotificationPreferences.findOne({
+  if (comment.user.toString() !== _id.toString()) {
+    await NotificationModel.create({
+      title: `Comment Liked`,
+      entityId: commentId,
+      description: `Your comment was liked by @${username}`,
       user: comment.user,
+      link: `/posts/${comment.post}`,
     });
-    if (
-      notificationPreference &&
-      notificationPreference.firebaseTokens &&
-      notificationPreference.firebaseTokens.length &&
-      notificationPreference.pushNotifications.commentLikes
-    ) {
-      notificationPreference.firebaseTokens.forEach((token) => {
-        sendNotification({
-          title: "New Group Chat",
-          body: `${username} added you to a group`,
-          token,
-        });
+  }
+
+  const notificationPreference = await NotificationPreferences.findOne({
+    user: comment.user,
+  });
+  if (
+    notificationPreference &&
+    notificationPreference.firebaseTokens &&
+    notificationPreference.firebaseTokens.length &&
+    notificationPreference.pushNotifications.commentLikes
+  ) {
+    notificationPreference.firebaseTokens.forEach((token) => {
+      sendNotification({
+        title: "New Group Chat",
+        body: `${username} added you to a group`,
+        token,
       });
-    }
+    });
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, comment, "Comment liked successfully"));
+    .json(new ApiResponse(200, {}, "Comment liked successfully"));
 });
 
-const dislikeComment = asyncHandler(async (req: Request, res: Response) => {
+const unlikeComment = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
@@ -195,25 +196,26 @@ const dislikeComment = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Comment not found");
   }
 
-  if (comment.likes.includes(_id)) {
-    await comment.updateOne(
-      { $pull: { likes: _id }, $inc: { likesCount: -1 } },
-      { new: true }
-    );
-    comment.likes = comment.likes.filter(
-      (id) => id.toString() !== _id.toString()
-    );
-    comment.likesCount = comment.likesCount - 1;
-    await NotificationModel.deleteOne({
-      entityId: commentId,
-      title: `Comment Liked`,
-      user: comment.user,
-    });
+  if (!comment.likes.includes(_id)) {
+    throw new ApiError(400, "You have already unliked this comment");
   }
+  await comment.updateOne(
+    { $pull: { likes: _id }, $inc: { likesCount: -1 } },
+    { new: true }
+  );
+  comment.likes = comment.likes.filter(
+    (id) => id.toString() !== _id.toString()
+  );
+  comment.likesCount = comment.likesCount - 1;
+  await NotificationModel.deleteOne({
+    entityId: commentId,
+    title: `Comment Liked`,
+    user: comment.user,
+  });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, comment, "Comment disliked successfully"));
+    .json(new ApiResponse(200, {}, "Comment unliked successfully"));
 });
 
 const getCommentLikes = asyncHandler(async (req: Request, res: Response) => {
@@ -247,6 +249,6 @@ export {
   createComment,
   deleteComment,
   likeComment,
-  dislikeComment,
+  unlikeComment,
   getCommentLikes,
 };
