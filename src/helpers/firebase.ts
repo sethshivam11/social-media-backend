@@ -1,5 +1,4 @@
 import admin from "firebase-admin";
-import { FirebaseMessagingError } from "firebase-admin/lib/utils/error";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 
 interface PushNotification {

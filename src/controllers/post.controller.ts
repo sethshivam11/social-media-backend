@@ -352,13 +352,17 @@ const videoFeed = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "No posts found");
   }
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {
-      posts,
-      pageNo,
-      max: totalCount,
-    }, "Posts retrieved successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        posts,
+        pageNo,
+        max: totalCount,
+      },
+      "Posts retrieved successfully"
+    )
+  );
 });
 
 const getVideoPost = asyncHandler(async (req: Request, res: Response) => {

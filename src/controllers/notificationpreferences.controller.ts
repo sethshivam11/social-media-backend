@@ -19,7 +19,7 @@ const saveFirebaseToken = asyncHandler(async (req: Request, res: Response) => {
   if (!savedNotificationPreferences) {
     await NotificationPreferences.create({
       user: _id,
-      firebaseToken: token,
+      firebaseTokens: [token],
     });
     return res
       .status(200)

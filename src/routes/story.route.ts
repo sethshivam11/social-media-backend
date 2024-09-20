@@ -17,7 +17,7 @@ router.use(verifyJWT);
 
 router.route("/").get(getStories);
 
-router.route("/:storyId").get(getUserStory);
+router.route("/user").get(getUserStory);
 
 router.route("/seen/:storyId").patch(seenStory);
 

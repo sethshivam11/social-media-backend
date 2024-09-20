@@ -12,6 +12,7 @@ import { File } from "./user.controller";
 import { NotificationModel } from "../models/notification.model";
 import sendNotification from "../helpers/firebase";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
+import { Follow } from "../models/follow.model";
 
 const createStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -20,27 +21,35 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, blocked } = req.user;
 
-  if (!req.files || req.files.length === 0) {
+  const mediaFiles: File[] = req.files as File[];
+  if (!mediaFiles || mediaFiles.length === 0) {
     throw new ApiError(400, "Atleast one story is required");
   }
 
   const prevStories = await Story.findOne({ user: _id });
 
   const maxStories =
-    prevStories?.media.length || 0 + (req.files.length as number);
+    prevStories?.media.length || 0 + (mediaFiles.length as number);
   if (maxStories > 5) {
     cleanupFiles();
     throw new ApiError(400, "Only 5 stories in a day is allowed");
   }
 
+  if (mediaFiles.some((file) => file.size > 100000000)) {
+    cleanupFiles();
+    throw new ApiError(400, "Media file size should not exceed 100MB");
+  }
+
+  if (mediaFiles.some((file) => !file.mimetype.includes("image"))) {
+    cleanupFiles();
+    throw new ApiError(400, "Only image files are allowed");
+  }
+
   let media: string[] = [];
-  const files: File[] = req.files as File[];
   await Promise.all(
-    files.map(async (file) => {
-      if (file.mimetype.includes("image")) {
-        const upload = await uploadToCloudinary(file.path, "stories");
-        if (upload && upload.secure_url) media.push(upload.secure_url);
-      }
+    mediaFiles.map(async (file) => {
+      const upload = await uploadToCloudinary(file.path, "stories");
+      if (upload && upload.secure_url) media.push(upload.secure_url);
     })
   );
 
@@ -49,8 +58,10 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (prevStories && prevStories.media.length > 0) {
-    prevStories.media.concat(media);
-    await prevStories.save();
+    await prevStories.updateOne(
+      { $addToSet: { media: { $each: media } } },
+      { new: true }
+    );
 
     return res
       .status(201)
@@ -76,53 +87,21 @@ const getStories = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, blocked } = req.user;
 
-  const follow = await Story.aggregate([
-    {
-      $lookup: {
-        from: "follows",
-        localField: "user",
-        foreignField: "user",
-        as: "follow",
-      },
-    },
-    {
-      $match: {
-        $expr: {
-          $eq: ["$user", _id],
-        },
-      },
-    },
-    {
-      $unwind: "$follow",
-    },
-    {
-      $project: {
-        follow: 1,
-      },
-    },
-    {
-      $limit: 1,
-    },
-  ]);
-
-  if (follow.length === 0 || follow[0].follow.followings.length === 0) {
-    throw new ApiError(404, "User not following anyone");
-  }
+  const follow = await Follow.findOne({ user: _id });
+  const followings = follow?.followings || [];
 
   const stories = await Story.find({
     user: {
-      $in: follow[0].follow.followings,
+      $in: followings,
       $nin: blocked,
     },
-    blockedTo: { $nin: [_id] },
-  })
-    .select("-blockedTo -seenBy -likes")
-    .populate({
-      model: "user",
-      path: "user",
-      select: "username fullName avatar",
-      strictPopulate: false,
-    });
+    blockedTo: blocked,
+  }).populate({
+    model: "user",
+    path: "user",
+    select: "username fullName avatar",
+    strictPopulate: false,
+  });
   if (!stories || stories.length === 0) {
     throw new ApiError(404, "No stories found");
   }
@@ -134,12 +113,18 @@ const getUserStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { username } = req.params;
+  const { _id } = req.user;
+  const { userId } = req.query;
 
   const stories = await Story.findOne({
-    $populate: "likes seenBy",
-    username,
-  }).select("-blockedTo");
+    user: userId || _id,
+  }).populate({
+    model: "user",
+    path: "likes seenBy",
+    select: "username fullName avatar",
+    strictPopulate: false,
+  });
+
   if (!stories) {
     throw new ApiError(404, "No stories found");
   }
@@ -190,7 +175,7 @@ const seenStory = asyncHandler(async (req: Request, res: Response) => {
   await story.updateOne({ $push: { seenBy: _id } }, { new: true });
   story.seenBy = [...story.seenBy, _id];
 
-  return res.status(200).json(new ApiResponse(200, story, "Story seen"));
+  return res.status(200).json(new ApiResponse(200, {}, "Story seen"));
 });
 
 const likeStory = asyncHandler(async (req: Request, res: Response) => {
@@ -240,7 +225,7 @@ const likeStory = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  return res.status(200).json(new ApiResponse(200, story, "Story liked"));
+  return res.status(200).json(new ApiResponse(200, {}, "Story liked"));
 });
 
 const unlikeStory = asyncHandler(async (req: Request, res: Response) => {
@@ -263,7 +248,7 @@ const unlikeStory = asyncHandler(async (req: Request, res: Response) => {
   await NotificationModel.findOneAndDelete({
     title: `Story Liked`,
     user: story.user,
-    entityId: story._id
+    entityId: story._id,
   });
 
   return res.status(200).json(new ApiResponse(200, {}, "Story unliked"));
