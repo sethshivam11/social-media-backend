@@ -58,7 +58,7 @@ const getNotificationPreferences = asyncHandler(
       .json(
         new ApiResponse(
           200,
-          { notificationPreferences: savedNotificationPreferences },
+          savedNotificationPreferences,
           "Notification preferences fetched successfully"
         )
       );

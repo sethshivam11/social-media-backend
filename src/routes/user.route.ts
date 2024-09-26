@@ -71,7 +71,7 @@ router.route("/unblock").get(unblockUser);
 
 router.route("/search").get(searchUsers);
 
-router.route("/getBlocked").get(getBlockedUsers);
+router.route("/blocked").get(getBlockedUsers);
 
 router.route("/suggestions").get(getFollowSuggestions);
 

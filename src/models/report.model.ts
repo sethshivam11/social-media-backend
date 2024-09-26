@@ -10,7 +10,7 @@ interface ReportInterface extends Document {
 }
 
 const reportSchema: Schema<ReportInterface> = new Schema({
-  entityId: { type: String, required: true },
+  entityId: { type: String },
   user: { type: Schema.Types.ObjectId, required: true },
   title: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },

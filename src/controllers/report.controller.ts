@@ -26,7 +26,7 @@ export const createReport = asyncHandler(
       }
     }
 
-    if (!title || !description || !kind || !entityId) {
+    if (!title || !description || !kind) {
       cleanupFiles();
       throw new ApiError(400, "Missing required fields");
     }
@@ -36,7 +36,7 @@ export const createReport = asyncHandler(
       title,
       description,
       kind,
-      entityId,
+      entityId: entityId || "",
       images,
     });
     if (!report) {

@@ -1,4 +1,9 @@
-export function Email(code: number, username: string, publicLink: string) {
+export function Email(
+  code: number,
+  username: string,
+  publicLink: string,
+  isRandom?: boolean
+) {
   return `<html
 lang="en"
 xmlns:o="urn:schemas-microsoft-com:office:office"
@@ -382,7 +387,11 @@ xmlns:v="urn:schemas-microsoft-com:vml"
                                     This code is valid for 5 minutes.
                                   </p>
                                   <a
-                                    href="${publicLink}/verify?code=${code}&username=${username}"
+                                    href=${
+                                      isRandom
+                                        ? `#`
+                                        : `${publicLink}/verify?code=${code}&username=${username}`
+                                    }
                                     style="
                                       text-decoration: none;
                                       display: block;

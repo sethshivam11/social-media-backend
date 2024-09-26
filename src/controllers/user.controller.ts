@@ -181,6 +181,7 @@ const getProfile = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const newUser = {
+    _id: user._id,
     username: user.username,
     fullName: user.fullName,
     avatar: user.avatar,
@@ -235,9 +236,13 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const resendEmail = asyncHandler(async (req: Request, res: Response) => {
-  const { username } = req.query;
-  if (!username || username === "") {
+  const { username, email } = req.query;
+  if (!username || typeof username !== "string") {
     throw new ApiError(400, "Username is required");
+  }
+
+  if (email && typeof email !== "string") {
+    throw new ApiError(400, "Invalid email");
   }
 
   const user = await User.findOne({ username });
@@ -253,7 +258,12 @@ const resendEmail = asyncHandler(async (req: Request, res: Response) => {
 
   await user.save({ validateBeforeSave: false });
 
-  await sendEmail(user.email, verifyCode, username as string);
+  await sendEmail(
+    email || user.email,
+    verifyCode,
+    username,
+    email ? true : false
+  );
 
   return res.status(200).json(new ApiResponse(200, {}, "Email sent"));
 });
@@ -434,7 +444,7 @@ const updateEmail = asyncHandler(async (req: Request, res: Response) => {
 
   const existedUser = await User.findOne({ email });
   if (existedUser) {
-    throw new ApiError(409, "Please use another email");
+    throw new ApiError(409, "Please use another email, this email is taken");
   }
 
   const isCodeInvalid = user.verifyCode === code;
@@ -516,16 +526,17 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
       userFollow.followers = userFollow.followers.filter(
         (follower) => follower !== blockUser._id
       );
-      blockUser.followersCount -= 1;
+      currentUser.followersCount -= 1;
     }
     if (userFollow.followings.includes(blockUser._id)) {
       userFollow.followings = userFollow.followings.filter(
         (following) => following !== blockUser._id
       );
-      blockUser.followingCount -= 1;
+      currentUser.followingCount -= 1;
     }
     await userFollow.save({ validateBeforeSave: false });
   }
+
   const blockUserFollow = await Follow.findOne({ user: blockUser._id });
   if (blockUserFollow) {
     if (blockUserFollow.followers.includes(blockUser._id)) {
@@ -573,15 +584,7 @@ const unblockUser = asyncHandler(async (req: Request, res: Response) => {
   );
   await currentUser.save({ validateBeforeSave: false });
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { blocked: currentUser.blocked },
-        "User was unblocked"
-      )
-    );
+  return res.status(200).json(new ApiResponse(200, {}, "User was unblocked"));
 });
 
 const renewAccessToken = asyncHandler(async (req: Request, res: Response) => {
@@ -701,20 +704,20 @@ const getBlockedUsers = asyncHandler(async (req: Request, res: Response) => {
   }
   const currentUser = req.user;
 
-  const blockedUsers = await User.populate(currentUser, {
+  const user = await User.populate(currentUser, {
     path: "blocked",
     select: "username avatar fullName",
     model: "user",
     strictPopulate: false,
   });
 
-  if (!blockedUsers.blocked || !blockedUsers.blocked.length) {
+  if (!user.blocked || !user.blocked.length) {
     throw new ApiError(404, "No blocked users found");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, blockedUsers.blocked, "Blocked users"));
+    .json(new ApiResponse(200, user.blocked, "Blocked users"));
 });
 
 const getFollowSuggestions = asyncHandler(
