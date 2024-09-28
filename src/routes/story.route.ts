@@ -6,6 +6,7 @@ import {
   getStories,
   getUserStory,
   likeStory,
+  markSelfSeen,
   seenStory,
   unlikeStory,
 } from "../controllers/story.controller";
@@ -20,6 +21,8 @@ router.route("/").get(getStories);
 router.route("/user").get(getUserStory);
 
 router.route("/seen/:storyId").patch(seenStory);
+
+router.route("/markSelfSeen").patch(markSelfSeen);
 
 router.route("/like/:storyId").patch(likeStory);
 

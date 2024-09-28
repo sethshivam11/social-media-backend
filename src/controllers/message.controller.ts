@@ -99,21 +99,21 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
         user,
       });
       if (
-        notificationPreference &&
-        notificationPreference.firebaseTokens &&
-        notificationPreference.firebaseTokens.length &&
+        notificationPreference?.firebaseTokens.length &&
         notificationPreference.pushNotifications.newMessages
       ) {
-        notificationPreference.firebaseTokens.forEach((token) => {
-          sendNotification({
-            title: "New Message",
-            body: message
-              ? `${username}: ${message}`
-              : `You have a new message from ${username}`,
-            token,
-            image: avatar,
-          });
-        });
+        await Promise.all(
+          notificationPreference.firebaseTokens.map((token) => {
+            sendNotification({
+              title: "New Message",
+              body: message
+                ? `${username}: ${message}`
+                : `You have a new message from ${username}`,
+              token,
+              image: avatar,
+            });
+          })
+        );
       }
     });
   }

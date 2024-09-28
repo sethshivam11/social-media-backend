@@ -117,18 +117,19 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
       user: participant,
     });
     if (
-      notificationPreference &&
-      notificationPreference.firebaseTokens &&
-      notificationPreference.firebaseTokens.length &&
+      notificationPreference?.firebaseTokens.length &&
       notificationPreference.pushNotifications.newGroups
     ) {
-      notificationPreference.firebaseTokens.forEach((token) => {
-        sendNotification({
-          title: "New Group Chat",
-          body: `${username} added you to a group`,
-          token,
-        });
-      });
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "New Group Chat",
+            body: `${username} added you to a group`,
+            token,
+            image: avatar
+          });
+        })
+      );
     }
   });
 
@@ -271,13 +272,16 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
       notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.newGroups
     ) {
-      notificationPreference.firebaseTokens.forEach((token) => {
-        sendNotification({
-          title: "New Group Chat",
-          body: `${username} added you to a group`,
-          token,
-        });
-      });
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "New Group Chat",
+            body: `${username} added you to a group`,
+            token,
+            image: avatar
+          });
+        })
+      );
     }
   });
 
@@ -345,13 +349,16 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
       notificationPreference.firebaseTokens.length &&
       notificationPreference.pushNotifications.newGroups
     ) {
-      notificationPreference.firebaseTokens.forEach((token) => {
-        sendNotification({
-          title: "New Group Chat",
-          body: `${username} removed you from a group`,
-          token,
-        });
-      });
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "New Group Chat",
+            body: `${username} removed you from a group`,
+            token,
+            image: avatar
+          });
+        })
+      );
     }
   });
 

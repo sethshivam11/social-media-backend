@@ -56,18 +56,19 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
       user: followeeId,
     });
     if (
-      notificationPreference &&
-      notificationPreference.firebaseTokens &&
-      notificationPreference.firebaseTokens.length &&
+      notificationPreference?.firebaseTokens.length &&
       notificationPreference.pushNotifications.newFollowers
     ) {
-      notificationPreference.firebaseTokens.forEach((token) => {
-        sendNotification({
-          title: "New Follower",
-          body: `${currentUser.username} started following you`,
-          token,
-        });
-      });
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "New Follower",
+            body: `${currentUser.username} started following you`,
+            token,
+            image: currentUser.avatar,
+          });
+        })
+      );
     }
 
     return res
@@ -93,18 +94,19 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
       user: followeeId,
     });
     if (
-      notificationPreference &&
-      notificationPreference.firebaseTokens &&
-      notificationPreference.firebaseTokens.length &&
+      notificationPreference?.firebaseTokens.length &&
       notificationPreference.pushNotifications.newFollowers
     ) {
-      notificationPreference.firebaseTokens.forEach((token) => {
-        sendNotification({
-          title: "New Follower",
-          body: `${currentUser.username} started following you`,
-          token,
-        });
-      });
+      await Promise.all(
+        notificationPreference.firebaseTokens.map(async (token) => {
+          await sendNotification({
+            title: "New Follower",
+            body: `${currentUser.username} started following you`,
+            token,
+            image: currentUser.avatar,
+          });
+        })
+      );
     }
 
     return res
@@ -157,6 +159,23 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
     .json(
       new ApiResponse(200, { unfollow: unfolloweeDetails }, "Unfollowed user")
     );
+});
+
+const getFollow = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(400, "User not verified");
+  }
+  const { _id } = req.user;
+
+  const follow = await Follow.findOne({
+    user: _id,
+  });
+
+  if (!follow) {
+    throw new ApiError(404, "Follow not found");
+  }
+
+  return res.status(200).json(new ApiResponse(200, follow, "Follow found"));
 });
 
 const getFollowers = asyncHandler(async (req: Request, res: Response) => {
@@ -214,4 +233,4 @@ const getFollowings = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json(new ApiResponse(200, follow, "Followers found"));
 });
 
-export { follow, unfollow, getFollowers, getFollowings };
+export { follow, unfollow, getFollow, getFollowers, getFollowings };

@@ -38,24 +38,6 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Post id and comment are required");
   }
 
-  const notificationPreference = await NotificationPreferences.findOne({
-    user: _id,
-  });
-  if (
-    notificationPreference &&
-    notificationPreference.firebaseTokens &&
-    notificationPreference.firebaseTokens.length &&
-    notificationPreference.pushNotifications.comments
-  ) {
-    notificationPreference.firebaseTokens.forEach((token) => {
-      sendNotification({
-        title: "New Comment",
-        body: `${username} commented on your post`,
-        token,
-      });
-    });
-  }
-
   const comment = await Comment.create({
     post: postId,
     user: _id,
@@ -65,16 +47,37 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Something went wrong, while creating comment");
   }
 
-  await NotificationModel.create({
-    title: "New Comment",
-    description: `${username} commented on your post`,
-    user: _id,
-    entityId: comment._id,
-    link: `/posts/${postId}`,
-    type: "comment",
-  });
-
   await comment.updateCommentsCount(postId, 1);
+
+  if (comment.user.toString() !== _id.toString()) {
+    await NotificationModel.create({
+      title: "New Comment",
+      description: `${username} commented on your post`,
+      user: _id,
+      entityId: comment._id,
+      link: `/posts/${postId}`,
+      type: "comment",
+    });
+
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: comment.user,
+    });
+    if (
+      notificationPreference?.firebaseTokens.length &&
+      notificationPreference.pushNotifications.comments
+    ) {
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "New Comment",
+            body: `${username} commented on your post`,
+            token,
+            image: avatar,
+          });
+        })
+      );
+    }
+  }
 
   return res
     .status(200)
@@ -125,7 +128,7 @@ const likeComment = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, username } = req.user;
+  const { _id, username, avatar } = req.user;
 
   const { commentId } = req.params;
   if (!commentId) {
@@ -155,24 +158,25 @@ const likeComment = asyncHandler(async (req: Request, res: Response) => {
       user: comment.user,
       link: `/posts/${comment.post}`,
     });
-  }
 
-  const notificationPreference = await NotificationPreferences.findOne({
-    user: comment.user,
-  });
-  if (
-    notificationPreference &&
-    notificationPreference.firebaseTokens &&
-    notificationPreference.firebaseTokens.length &&
-    notificationPreference.pushNotifications.commentLikes
-  ) {
-    notificationPreference.firebaseTokens.forEach((token) => {
-      sendNotification({
-        title: "New Group Chat",
-        body: `${username} added you to a group`,
-        token,
-      });
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: comment.user,
     });
+    if (
+      notificationPreference?.firebaseTokens.length &&
+      notificationPreference.pushNotifications.commentLikes
+    ) {
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "Comment Liked",
+            body: `Your comment was liked by @${username}`,
+            token,
+            image: avatar,
+          });
+        })
+      );
+    }
   }
 
   return res

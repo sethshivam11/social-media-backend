@@ -1,6 +1,7 @@
 import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
 import {
+  checkTokenExistence,
   deleteFirebaseToken,
   getNotificationPreferences,
   saveFirebaseToken,
@@ -17,6 +18,8 @@ router.route("/saveToken").post(saveFirebaseToken);
 router
   .route("/updatePreferences")
   .put(updateNotificationPreferences);
+
+router.route("/checkToken/:token").get(checkTokenExistence);
 
 router.route("/updateToken").patch(updateFirebaseToken);
 

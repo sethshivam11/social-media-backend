@@ -25,11 +25,12 @@ const saveFirebaseToken = asyncHandler(async (req: Request, res: Response) => {
       .status(200)
       .json(new ApiResponse(200, {}, "Token saved successfully"));
   }
+
   if (!savedNotificationPreferences.firebaseTokens.includes(token)) {
-    savedNotificationPreferences.firebaseTokens = [
-      ...savedNotificationPreferences.firebaseTokens,
-      token,
-    ];
+    await savedNotificationPreferences.updateOne(
+      { $push: { firebaseTokens: token } },
+      { new: true }
+    );
   }
 
   return res
@@ -64,6 +65,22 @@ const getNotificationPreferences = asyncHandler(
       );
   }
 );
+
+const checkTokenExistence = asyncHandler(async (req: Request, res: Response) => {
+  const { token } = req.params;
+
+  const notificationPreference = await NotificationPreferences.findOne({
+    $in: { firebaseTokens: token },
+  });
+
+  if (!notificationPreference) {
+    throw new ApiError(404, "Token not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Token exists in database"));
+});
 
 const updateNotificationPreferences = asyncHandler(
   async (req: Request, res: Response) => {
@@ -221,6 +238,7 @@ const deleteFirebaseToken = asyncHandler(
 export {
   saveFirebaseToken,
   updateFirebaseToken,
+  checkTokenExistence,
   getNotificationPreferences,
   updateNotificationPreferences,
   deleteFirebaseToken,

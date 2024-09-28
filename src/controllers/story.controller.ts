@@ -59,7 +59,7 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
 
   if (prevStories && prevStories.media.length > 0) {
     await prevStories.updateOne(
-      { $addToSet: { media: { $each: media } } },
+      { $addToSet: { media: { $each: media } }, selfSeen: false },
       { new: true }
     );
 
@@ -72,6 +72,12 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
     user: _id,
     media,
     blockedTo: blocked,
+    populate: {
+      model: "user",
+      path: "user",
+      select: "username fullName avatar",
+      strictPopulate: false,
+    },
   });
 
   if (!story) {
@@ -79,6 +85,26 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
   }
 
   return res.status(201).json(new ApiResponse(201, story, "Story uploaded"));
+});
+
+const markSelfSeen = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+
+  const story = await Story.findOne({ user: _id });
+  if (!story) {
+    throw new ApiError(404, "Story not found");
+  }
+
+  if (story.selfSeen) {
+    throw new ApiError(400, "Story already seen");
+  }
+
+  await story.updateOne({ selfSeen: true }, { new: true });
+
+  return res.status(200).json(new ApiResponse(200, {}, "Story seen"));
 });
 
 const getStories = asyncHandler(async (req: Request, res: Response) => {
@@ -120,7 +146,7 @@ const getUserStory = asyncHandler(async (req: Request, res: Response) => {
     user: userId || _id,
   }).populate({
     model: "user",
-    path: "likes seenBy",
+    path: "likes seenBy user",
     select: "username fullName avatar",
     strictPopulate: false,
   });
@@ -204,25 +230,25 @@ const likeStory = asyncHandler(async (req: Request, res: Response) => {
       user: story.user,
       entityId: story._id,
     });
-  }
 
-  const notificationPreference = await NotificationPreferences.findOne({
-    user: story.user,
-  });
-  if (
-    notificationPreference &&
-    notificationPreference.firebaseTokens &&
-    notificationPreference.firebaseTokens.length &&
-    notificationPreference.pushNotifications.storyLikes
-  ) {
-    notificationPreference.firebaseTokens.forEach((token) => {
-      sendNotification({
-        title: "Story Liked`,",
-        body: `${_id} liked your story`,
-        token,
-        image: avatar,
-      });
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: story.user,
     });
+    if (
+      notificationPreference?.firebaseTokens.length &&
+      notificationPreference?.pushNotifications.storyLikes
+    ) {
+      await Promise.all(
+        notificationPreference.firebaseTokens.map(async (token) => {
+          await sendNotification({
+            title: "Story Liked`,",
+            body: `${_id} liked your story`,
+            token,
+            image: avatar,
+          });
+        })
+      );
+    }
   }
 
   return res.status(200).json(new ApiResponse(200, {}, "Story liked"));
@@ -256,6 +282,7 @@ const unlikeStory = asyncHandler(async (req: Request, res: Response) => {
 
 export {
   getStories,
+  markSelfSeen,
   createStory,
   getUserStory,
   deleteStory,

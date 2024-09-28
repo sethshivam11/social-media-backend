@@ -35,11 +35,16 @@ const uploadToCloudinary = async (
       type === "posts" || type === "avatars"
         ? { aspect_ratio: "1:1", crop: "crop" }
         : {};
+    const isStory =
+      type === "stories"
+        ? { expires_at: Date.now() + 1000 * 60 * 60 * 24 }
+        : {};
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
       folder: `sociial/${type}`,
       upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || "sociial",
       ...isPost,
+      ...isStory,
     });
 
     fs.unlinkSync(localFilePath);

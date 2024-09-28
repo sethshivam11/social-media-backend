@@ -5,6 +5,7 @@ interface StoryInterface extends Document {
   media: string[];
   seenBy: ObjectId[];
   likes: ObjectId[];
+  selfSeen: boolean;
   blockedTo: ObjectId[];
   createdAt: Date;
 }
@@ -17,7 +18,7 @@ const storySchema: Schema<StoryInterface> = new Schema({
   },
   media: {
     type: [String],
-    minlength: 1
+    minlength: 1,
   },
   likes: [
     {
@@ -37,6 +38,10 @@ const storySchema: Schema<StoryInterface> = new Schema({
       ref: "user",
     },
   ],
+  selfSeen: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     expires: 86400,

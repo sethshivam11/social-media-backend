@@ -331,12 +331,12 @@ const videoFeed = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const totalCount = await Post.countDocuments({
-    user: { $nin: [...blocked, _id] },
+    user: { $nin: [...blocked] },
     kind: "video",
   });
 
   const posts = await Post.find({
-    user: { $nin: [...blocked, _id] },
+    user: { $nin: [...blocked] },
     kind: "video",
   })
     .populate({
@@ -493,26 +493,25 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
       description: `${username} liked your post`,
       user: post.user,
     });
-  }
 
-  const notificationPreference = await NotificationPreferences.findOne({
-    user: post.user,
-  });
-  if (
-    notificationPreference &&
-    notificationPreference.firebaseTokens &&
-    notificationPreference.firebaseTokens.length &&
-    notificationPreference.pushNotifications.likes &&
-    notificationPreference.user !== post.user
-  ) {
-    notificationPreference.firebaseTokens.forEach((token) => {
-      sendNotification({
-        title: "Post Liked",
-        body: `${username} liked your post`,
-        token,
-        image: avatar,
-      });
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: post.user,
     });
+    if (
+      notificationPreference?.firebaseTokens.length &&
+      notificationPreference.pushNotifications.likes
+    ) {
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "Post Liked",
+            body: `${username} liked your post`,
+            token,
+            image: avatar,
+          });
+        })
+      );
+    }
   }
 
   return res

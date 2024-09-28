@@ -174,7 +174,10 @@ const getProfile = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Username or user id is required");
   }
 
-  const user = await User.findOne({ $or: [{ username }, { _id: userId }] });
+  const user = await User.findOne({
+    $or: [{ username }, { _id: userId }],
+    isMailVerified: true,
+  });
 
   if (!user) {
     throw new ApiError(404, "User not found");
@@ -317,11 +320,10 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
       user: _id,
     });
     if (notificationPreference) {
-      notificationPreference.firebaseTokens =
-        notificationPreference?.firebaseTokens.filter(
-          (token) => token === firebaseToken
-        );
-      await notificationPreference.save();
+      await notificationPreference.updateOne(
+        { $pull: { firebaseTokens: firebaseToken } },
+        { new: true }
+      );
     }
   }
 
@@ -688,6 +690,7 @@ const searchUsers = asyncHandler(async (req: Request, res: Response) => {
         { fullName: { $regex: `${query}`, $options: "i" } },
       ],
       _id: { $nin: blocked },
+      isMailVerified: true,
     },
     "username fullName avatar"
   );
@@ -733,7 +736,7 @@ const getFollowSuggestions = asyncHandler(
     const follow = await Follow.findOne({ user: _id });
     if (!follow) {
       const users = await User.find(
-        { _id: { $ne: _id, $nin: blocked } },
+        { _id: { $ne: _id, $nin: blocked }, isMailVerified: true },
         "username fullName avatar"
       ).limit(limit);
 
@@ -748,7 +751,11 @@ const getFollowSuggestions = asyncHandler(
 
     const users = await User.find(
       {
-        _id: { $nin: [...follow.followings, ...blocked], $ne: _id },
+        _id: {
+          $nin: [...follow.followings, ...blocked],
+          $ne: _id,
+        },
+        isMailVerified: true,
       },
       "username fullName avatar"
     ).limit(limit);
