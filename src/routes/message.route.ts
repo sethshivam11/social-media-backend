@@ -4,6 +4,7 @@ import {
   deleteMessage,
   editMessageContent,
   getMessages,
+  getReacts,
   reactMessage,
   sendMessage,
   unreactMessage,
@@ -18,12 +19,14 @@ router.route("/get").get(getMessages);
 
 router.route("/send").post(upload.single("attachment"), sendMessage);
 
-router.route("/react").patch(reactMessage);
+router.route("/react/:messageId").patch(reactMessage);
 
-router.route("/unreact").patch(unreactMessage);
+router.route("/unreact/:messageId").patch(unreactMessage);
 
 router.route("/delete/:messageId").delete(deleteMessage);
 
 router.route("/editMessage").patch(editMessageContent);
+
+router.route("/getReacts/:messageId").get(getReacts);
 
 export default router;

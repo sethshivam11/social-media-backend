@@ -127,7 +127,9 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, fullName, avatar, username } = req.user;
 
-  const { messageId, content } = req.body;
+  const { content } = req.body;
+  const { messageId } = req.params;
+
   if (!messageId) {
     throw new ApiError(400, "MessageId is required");
   }
@@ -137,21 +139,27 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Message not found");
   }
 
-  message.reacts.forEach(
-    (react: { content: string; user: mongoose.ObjectId }) => {
-      if (react.user.toString() === _id.toString()) {
-        throw new ApiError(400, "You already reacted to this message");
-      }
-    }
-  );
-
-  const reacts = {
+  const reaction = {
     content: content || "❤️",
-    user: _id.toString(),
+    user: _id,
   };
-  message.reacts = [reacts, ...(message.reacts || [])];
-
-  await message.save();
+  
+  if (
+    message.reacts.some(
+      (react: { user: mongoose.ObjectId }) =>
+        react.user.toString() === _id.toString()
+    )
+  ) {
+    message.reacts = message.reacts.map((react) => {
+      if (react.user.toString() === _id.toString()) {
+        react.content = content || "❤️";
+      }
+      return react;
+    });
+    await message.save();
+  } else {
+    await message.updateOne({ $push: { reacts: reaction } }, { new: true });
+  }
 
   const chats = await fetchUsersInChat(message.chat);
   if (chats) {
@@ -159,12 +167,12 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
       if (user.toString() === _id.toString()) return;
       emitSocketEvent(user.toString(), ChatEventEnum.NEW_REACT_EVENT, {
         user: { fullName, content, username, avatar },
-        react: reacts,
+        react: reaction,
       });
     });
   }
 
-  return res.status(200).json(new ApiResponse(200, message, "Message reacted"));
+  return res.status(200).json(new ApiResponse(200, {}, "Reacted to message"));
 });
 
 const unreactMessage = asyncHandler(async (req: Request, res: Response) => {
@@ -173,7 +181,7 @@ const unreactMessage = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, fullName, avatar, username } = req.user;
 
-  const { messageId } = req.body;
+  const { messageId } = req.params;
   if (!messageId) {
     throw new ApiError(400, "Message is required");
   }
@@ -328,11 +336,33 @@ const editMessageContent = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json(new ApiResponse(200, message, "Message edited"));
 });
 
+const getReacts = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+
+  const { messageId } = req.params;
+
+  const message = await Message.findOne({ _id: messageId }, "reacts").populate({
+    model: "user",
+    path: "reacts.user",
+    select: "username fullName avatar",
+    strictPopulate: false,
+  });
+
+  if (!message) {
+    throw new ApiError(404, "Message not found");
+  }
+
+  return res.status(200).json(new ApiResponse(200, message, "Reacts fetched"));
+});
+
 export {
+  getReacts,
+  getMessages,
   sendMessage,
   reactMessage,
-  unreactMessage,
   deleteMessage,
-  getMessages,
+  unreactMessage,
   editMessageContent,
 };

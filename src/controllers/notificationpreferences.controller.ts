@@ -10,7 +10,7 @@ const saveFirebaseToken = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const { _id } = req.user;
-  const { token } = req.body;
+  const { token, prevToken } = req.body;
 
   const savedNotificationPreferences = await NotificationPreferences.findOne({
     user: _id,
@@ -27,10 +27,12 @@ const saveFirebaseToken = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (!savedNotificationPreferences.firebaseTokens.includes(token)) {
-    await savedNotificationPreferences.updateOne(
-      { $push: { firebaseTokens: token } },
-      { new: true }
+    const savedTokens = savedNotificationPreferences.firebaseTokens;
+    savedNotificationPreferences.firebaseTokens = savedTokens.filter(
+      (token) => token !== prevToken
     );
+    savedNotificationPreferences.firebaseTokens = [...savedTokens, token];
+    await savedNotificationPreferences.save();
   }
 
   return res
@@ -66,21 +68,23 @@ const getNotificationPreferences = asyncHandler(
   }
 );
 
-const checkTokenExistence = asyncHandler(async (req: Request, res: Response) => {
-  const { token } = req.params;
+const checkTokenExistence = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { token } = req.params;
 
-  const notificationPreference = await NotificationPreferences.findOne({
-    $in: { firebaseTokens: token },
-  });
+    const notificationPreference = await NotificationPreferences.findOne({
+      firebaseTokens: { $in: [token] },
+    });
 
-  if (!notificationPreference) {
-    throw new ApiError(404, "Token not found");
+    if (!notificationPreference) {
+      throw new ApiError(404, "Token not found");
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Token exists in database"));
   }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Token exists in database"));
-});
+);
 
 const updateNotificationPreferences = asyncHandler(
   async (req: Request, res: Response) => {
