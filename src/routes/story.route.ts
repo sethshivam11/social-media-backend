@@ -2,6 +2,7 @@ import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
 import {
   createStory,
+  deleteExpiredImages,
   deleteStory,
   getStories,
   getUserStory,
@@ -13,6 +14,8 @@ import {
 import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
+
+router.route("/deleteExpiredImages").get(deleteExpiredImages);
 
 router.use(verifyJWT);
 

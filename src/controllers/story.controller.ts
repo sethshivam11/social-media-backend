@@ -13,6 +13,7 @@ import { NotificationModel } from "../models/notification.model";
 import sendNotification from "../helpers/firebase";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import { Follow } from "../models/follow.model";
+import { v2 as cloudinary } from "cloudinary";
 
 const createStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -280,6 +281,34 @@ const unlikeStory = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json(new ApiResponse(200, {}, "Story unliked"));
 });
 
+const deleteExpiredImages = asyncHandler(async (_: Request, res: Response) => { 
+  const result = await cloudinary.search
+    .expression(`folder=sociial/stories AND uploaded_at<1d`)
+    .max_results(50)
+    .execute();
+
+  if (!result) {
+    throw new ApiError(
+      404,
+      "Something went wrong while deleting expired images"
+    );
+  } else if (result.total_count === 0) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "No expired images found"));
+  } else {
+    await Promise.all(
+      result.resources.map((resource: { public_id: string }) =>
+        deleteFromCloudinary(resource.public_id)
+      )
+    );
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result.resources, "Deleted expired images"));
+});
+
 export {
   getStories,
   markSelfSeen,
@@ -289,4 +318,5 @@ export {
   seenStory,
   likeStory,
   unlikeStory,
+  deleteExpiredImages,
 };
