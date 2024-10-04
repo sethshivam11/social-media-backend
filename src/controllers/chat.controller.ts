@@ -126,7 +126,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
             title: "New Group Chat",
             body: `${username} added you to a group`,
             token,
-            image: avatar
+            image: avatar,
           });
         })
       );
@@ -175,6 +175,17 @@ const getChats = asyncHandler(async (req: Request, res: Response) => {
       },
     },
     { $unwind: { path: "$lastMessage", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        users: {
+          $filter: {
+            input: "$users",
+            as: "user",
+            cond: { $ne: ["$$user._id", _id] },
+          },
+        },
+      },
+    },
     {
       $addFields: {
         user: {
@@ -278,7 +289,7 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
             title: "New Group Chat",
             body: `${username} added you to a group`,
             token,
-            image: avatar
+            image: avatar,
           });
         })
       );
@@ -355,7 +366,7 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
             title: "New Group Chat",
             body: `${username} removed you from a group`,
             token,
-            image: avatar
+            image: avatar,
           });
         })
       );

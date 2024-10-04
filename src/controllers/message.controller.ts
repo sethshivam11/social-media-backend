@@ -75,6 +75,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!msg) {
     throw new ApiError(500, "Message not sent");
   }
+  await msg.populate("sender", "username fullName avatar");
 
   await Chat.findByIdAndUpdate(
     chatId,
@@ -143,7 +144,7 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
     content: content || "❤️",
     user: _id,
   };
-  
+
   if (
     message.reacts.some(
       (react: { user: mongoose.ObjectId }) =>
@@ -172,7 +173,21 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  return res.status(200).json(new ApiResponse(200, {}, "Reacted to message"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        content: reaction.content,
+        user: {
+          _id,
+          fullName,
+          username,
+          avatar,
+        },
+      },
+      "Reacted to message"
+    )
+  );
 });
 
 const unreactMessage = asyncHandler(async (req: Request, res: Response) => {
@@ -284,7 +299,7 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
   const messagesCount = await Message.countDocuments({ chat: chatId });
   const messages = await Message.find({ chat: chatId })
     .populate("sender reacts", "username fullName avatar")
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: 1 })
     .limit(limit)
     .skip((pageNo - 1) * limit);
 
@@ -354,7 +369,7 @@ const getReacts = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Message not found");
   }
 
-  return res.status(200).json(new ApiResponse(200, message, "Reacts fetched"));
+  return res.status(200).json(new ApiResponse(200, message.reacts, "Reacts fetched"));
 });
 
 export {
