@@ -34,7 +34,18 @@ const messageSchema: Schema<MessageInterface> = new Schema(
     },
     attachment: {
       url: String,
-      kind: String,
+      kind: {
+        type: String,
+        enum: ["image", "video", "audio", "document"],
+      },
+    },
+    kind: {
+      type: String,
+      enum: ["message", "location", "call", "media", "audio", "document"],
+    },
+    reply: {
+      username: String,
+      content: String,
     },
     reacts: [
       {

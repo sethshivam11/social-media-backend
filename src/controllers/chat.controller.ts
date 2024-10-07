@@ -169,7 +169,7 @@ const getChats = asyncHandler(async (req: Request, res: Response) => {
         as: "lastMessage",
         pipeline: [
           {
-            $project: { content: 1, createdAt: 1 },
+            $project: { content: 1, kind: 1, createdAt: 1 },
           },
         ],
       },

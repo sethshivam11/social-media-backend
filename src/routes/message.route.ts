@@ -2,7 +2,7 @@ import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
 import {
   deleteMessage,
-  editMessageContent,
+  updateMessage,
   getMessages,
   getReacts,
   reactMessage,
@@ -25,7 +25,7 @@ router.route("/unreact/:messageId").patch(unreactMessage);
 
 router.route("/delete/:messageId").delete(deleteMessage);
 
-router.route("/editMessage").patch(editMessageContent);
+router.route("/editMessage").patch(updateMessage);
 
 router.route("/getReacts/:messageId").get(getReacts);
 

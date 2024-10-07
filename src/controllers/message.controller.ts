@@ -30,7 +30,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   const { _id, username, avatar } = req.user;
 
   const attachmentLocalFile = req.file as File;
-  const { message, chatId, kind } = req.body;
+  const { message, chatId, kind, reply } = req.body;
 
   if (!(message || attachmentLocalFile) || !chatId) {
     throw new ApiError(400, "Message or attachment and chatId is required");
@@ -70,6 +70,10 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
     sender: _id,
     kind,
     attachment,
+    reply: {
+      username,
+      content: reply,
+    },
   });
 
   if (!msg) {
@@ -146,14 +150,11 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
   };
 
   if (
-    message.reacts.some(
-      (react: { user: mongoose.ObjectId }) =>
-        react.user.toString() === _id.toString()
-    )
+    message.reacts.some((react) => react.user.toString() === _id.toString())
   ) {
     message.reacts = message.reacts.map((react) => {
       if (react.user.toString() === _id.toString()) {
-        react.content = content || "❤️";
+        react.content = reaction.content;
       }
       return react;
     });
@@ -167,8 +168,10 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
     chats.users.forEach(async (user) => {
       if (user.toString() === _id.toString()) return;
       emitSocketEvent(user.toString(), ChatEventEnum.NEW_REACT_EVENT, {
-        user: { fullName, content, username, avatar },
-        react: reaction,
+        user: _id,
+        content: reaction.content,
+        chat: message.chat,
+        messageId: message._id,
       });
     });
   }
@@ -178,12 +181,7 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
       200,
       {
         content: reaction.content,
-        user: {
-          _id,
-          fullName,
-          username,
-          avatar,
-        },
+        user: _id,
       },
       "Reacted to message"
     )
@@ -194,7 +192,7 @@ const unreactMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, fullName, avatar, username } = req.user;
+  const { _id } = req.user;
 
   const { messageId } = req.params;
   if (!messageId) {
@@ -224,8 +222,9 @@ const unreactMessage = asyncHandler(async (req: Request, res: Response) => {
     chats.users.forEach(async (user) => {
       if (user.toString() === _id.toString()) return;
       emitSocketEvent(user.toString(), ChatEventEnum.NEW_UNREACT_EVENT, {
-        user: { fullName, avatar, username },
-        unreact: true,
+        user: _id,
+        chat: message.chat,
+        messageId: message._id,
       });
     });
   }
@@ -237,7 +236,7 @@ const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, fullName, avatar, username } = req.user;
+  const { _id } = req.user;
 
   const { messageId } = req.params;
   if (!messageId) {
@@ -269,10 +268,11 @@ const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
   if (chats) {
     chats.users.forEach(async (user) => {
       if (user.toString() === _id.toString()) return;
-      emitSocketEvent(user.toString(), ChatEventEnum.MESSAGE_DELETE_EVENT, {
-        user: { fullName, avatar, username },
-        message: messageId,
-      });
+      emitSocketEvent(
+        user.toString(),
+        ChatEventEnum.MESSAGE_DELETE_EVENT,
+        message
+      );
     });
   }
 
@@ -314,7 +314,7 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
-const editMessageContent = asyncHandler(async (req: Request, res: Response) => {
+const updateMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
@@ -369,7 +369,9 @@ const getReacts = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Message not found");
   }
 
-  return res.status(200).json(new ApiResponse(200, message.reacts, "Reacts fetched"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, message.reacts, "Reacts fetched"));
 });
 
 export {
@@ -379,5 +381,5 @@ export {
   reactMessage,
   deleteMessage,
   unreactMessage,
-  editMessageContent,
+  updateMessage,
 };
