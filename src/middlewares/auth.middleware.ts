@@ -6,8 +6,7 @@ import { User } from "../models/user.model";
 const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
   try {
     const token =
-      req.cookies?.accessToken ||
-      req.header("Authorization")?.replace("Bearer ", "");
+      req.cookies?.token || req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) {
       throw new ApiError(400, "Token is required");
@@ -15,30 +14,30 @@ const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
 
     const decodedToken = (await jwt.verify(
       token,
-      process.env.ACCESS_TOKEN_SECRET as string
+      process.env.TOKEN_SECRET as string
     )) as JwtPayload;
 
     if (!decodedToken?._id) {
       throw new ApiError(401, "Invalid token!");
     }
 
-    const user = await User.findById(decodedToken._id);
+    const user = await User.findById(decodedToken._id, "-password");
 
     if (!user) {
       throw new ApiError(400, "User not found");
     }
 
-    const removeSensitiveData = user.toObject();
-    delete removeSensitiveData.password;
-    delete removeSensitiveData.refreshToken;
+    const isLoggedIn = user.sessions.some((session) => session.token === token);
+    if (!isLoggedIn) {
+      throw new ApiError(401, "Invalid token!");
+    }
 
-    req.user = removeSensitiveData;
+    user.sessions = [];
+    req.user = user;
 
     next();
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      error.message = "Token expired!";
-    } else if (
+    if (
       error instanceof jwt.JsonWebTokenError ||
       error instanceof jwt.NotBeforeError
     ) {

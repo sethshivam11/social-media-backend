@@ -9,7 +9,6 @@ import {
   updateDetails,
   blockUser,
   unblockUser,
-  renewAccessToken,
   updatePassword,
   getCurrentUser,
   isUsernameAvailable,
@@ -24,6 +23,10 @@ import {
   savePost,
   unsavePost,
   getSavedPosts,
+  getSessions,
+  removeSession,
+  clearCookies,
+  removeAllSessions,
 } from "../controllers/user.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -43,9 +46,9 @@ router.route("/resendMail").get(resendEmail);
 
 router.route("/forgotPassword").post(forgotPassword);
 
-router.route("/renewAccessToken").post(renewAccessToken);
-
 router.route("/getProfile").get(getProfile);
+
+router.route("/clearCookies").get(clearCookies);
 
 // Verified routes
 
@@ -80,5 +83,11 @@ router.route("/save/:postId").get(savePost);
 router.route("/unsave/:postId").get(unsavePost);
 
 router.route("/saved").get(getSavedPosts);
+
+router.route("/sessions").get(getSessions);
+
+router.route("/removeSession/:sessionId").delete(removeSession);
+
+router.route("/removeAllSessions").delete(removeAllSessions);
 
 export default router;

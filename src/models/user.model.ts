@@ -15,13 +15,19 @@ export interface UserInterface extends Document {
   followersCount: number;
   postsCount: number;
   isMailVerified: boolean;
-  refreshToken?: string;
   verifyCode: string;
   verifyCodeExpiry: Date;
+  sessions: {
+    _id?: ObjectId;
+    token: string;
+    device?: string;
+    location?: string;
+    createdAt?: Date;
+    lastLogin?: Date;
+  }[];
   savedPosts: ObjectId[];
   isPasswordCorrect(password: string): boolean;
-  generateRefreshToken(): string;
-  generateAccessToken(): string;
+  generateToken(): string;
 }
 
 const userSchema: Schema<UserInterface> = new Schema(
@@ -74,6 +80,29 @@ const userSchema: Schema<UserInterface> = new Schema(
     },
     verifyCode: String,
     verifyCodeExpiry: Date,
+    sessions: [
+      {
+        token: {
+          type: String,
+          required: true,
+        },
+        device: {
+          type: String,
+          default: "Unknown",
+        },
+        location: {
+          type: String,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now(),
+        },
+        lastActivity: {
+          type: Date,
+          default: Date.now(),
+        },
+      },
+    ],
     savedPosts: [
       {
         type: Schema.Types.ObjectId,
@@ -86,7 +115,6 @@ const userSchema: Schema<UserInterface> = new Schema(
         ref: "user",
       },
     ],
-    refreshToken: String,
   },
   {
     timestamps: true,
@@ -102,33 +130,15 @@ userSchema.methods.isPasswordCorrect = async function (password: string) {
   return await bcrypt.compare(password, this.password);
 };
 
-userSchema.methods.generateAccessToken = async function () {
-  return await jwt.sign(
+userSchema.methods.generateToken = async function () {
+  return jwt.sign(
     {
       _id: this._id,
       fullName: this.fullName,
       email: this.email,
       username: this.username,
     },
-    process.env.ACCESS_TOKEN_SECRET as string,
-    {
-      expiresIn: process.env.ACCESS_TOKEN_EXPIRY as string,
-    }
-  );
-};
-
-userSchema.methods.generateRefreshToken = async function () {
-  return await jwt.sign(
-    {
-      _id: this._id,
-      fullName: this.fullName,
-      email: this.email,
-      username: this.username,
-    },
-    process.env.REFRESH_TOKEN_SECRET as string,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY as string,
-    }
+    process.env.TOKEN_SECRET as string
   );
 };
 

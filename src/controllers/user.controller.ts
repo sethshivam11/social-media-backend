@@ -8,7 +8,6 @@ import {
   deleteFromCloudinary,
   uploadToCloudinary,
 } from "../utils/cloudinary";
-import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../constants";
 import sendEmail from "../helpers/mailer";
 import { Follow } from "../models/follow.model";
@@ -36,12 +35,16 @@ const options = {
 const removeSensitiveData = (user: UserInterface) => {
   const newUser = user.toObject();
   delete newUser.password;
-  delete newUser.refreshToken;
+  delete newUser.sessions;
 
   return newUser;
 };
 
-const generateAccessAndRefreshToken = async (userId: string) => {
+const generateToken = async (
+  userId: string,
+  device?: string,
+  location?: string
+) => {
   try {
     const user = await User.findById(userId);
 
@@ -49,19 +52,16 @@ const generateAccessAndRefreshToken = async (userId: string) => {
       throw new ApiError(404, "User not found");
     }
 
-    const accessToken = await user?.generateAccessToken();
-    const refreshToken = await user?.generateRefreshToken();
+    const lastLogin = new Date();
+    const token = await user?.generateToken();
+    user.sessions = [...user.sessions, { token, device, location, lastLogin }];
 
-    user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
 
-    return { accessToken, refreshToken };
+    return token;
   } catch (err) {
     console.log(err);
-    throw new ApiError(
-      500,
-      "Something went wrong, while generating access and refresh tokens"
-    );
+    throw new ApiError(500, "Something went wrong, while generating token");
   }
 };
 
@@ -125,7 +125,7 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const loginUser = asyncHandler(async (req: Request, res: Response) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, device, location } = req.body;
 
   if (!(username || email) || !password) {
     throw new ApiError(400, "Username or email is required");
@@ -144,23 +144,19 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "Invalid passsword");
   }
 
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-    user._id
-  );
+  const token = await generateToken(user._id, device, location);
 
   const userObj = removeSensitiveData(user);
 
   return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("token", token, options)
     .json(
       new ApiResponse(
         200,
         {
           user: userObj,
-          accessToken,
-          refreshToken,
+          token,
         },
         "User logged in successfully"
       )
@@ -202,7 +198,9 @@ const getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
 
-  return res.status(200).json(new ApiResponse(200, req.user, "User found"));
+  const { sessions, ...safeUser } = req.user.toObject();
+
+  return res.status(200).json(new ApiResponse(200, safeUser, "User found"));
 });
 
 const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
@@ -309,6 +307,12 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
 
   const { _id } = req.user;
   const { firebaseToken } = req.query;
+  const { token } =
+    req.cookies || req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    throw new ApiError(400, "Token is required");
+  }
 
   const user = await User.findById(_id);
   if (!user) {
@@ -327,11 +331,13 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  user.refreshToken = "";
+  user.sessions = user.sessions.filter((session) => session.token !== token);
   await user.save({ validateBeforeSave: false });
-  res.clearCookie("accessToken").clearCookie("refreshToken");
 
-  return res.status(200).json(new ApiResponse(200, {}, "User logged out"));
+  return res
+    .status(200)
+    .clearCookie("token")
+    .json(new ApiResponse(200, {}, "User logged out"));
 });
 
 const updatePassword = asyncHandler(async (req: Request, res: Response) => {
@@ -589,57 +595,6 @@ const unblockUser = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json(new ApiResponse(200, {}, "User was unblocked"));
 });
 
-const renewAccessToken = asyncHandler(async (req: Request, res: Response) => {
-  const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
-  if (!refreshToken) {
-    throw new ApiError(400, "Refresh token is required");
-  }
-
-  const decodedToken = (await jwt.verify(
-    refreshToken,
-    process.env.REFRESH_TOKEN_SECRET as string
-  )) as jwt.JwtPayload;
-  if (!decodedToken?._id) {
-    res.clearCookie("refreshToken");
-    throw new ApiError(401, "Invalid token!");
-  }
-
-  const user = await User.findById(decodedToken._id);
-  if (!user) {
-    res.clearCookie("refreshToken");
-    throw new ApiError(401, "User not found");
-  }
-
-  if (user.refreshToken !== refreshToken) {
-    res.clearCookie("refreshToken");
-    throw new ApiError(201, "Refresh token mismatch");
-  }
-
-  const accessToken = await user.generateAccessToken();
-  if (!accessToken) {
-    throw new ApiError(400, "Something went wrong, while renewing accessToken");
-  }
-
-  res.clearCookie("accessToken");
-
-  const newUser = removeSensitiveData(user);
-
-  return res
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        {
-          user: newUser,
-          accessToken,
-        },
-        "Access token was renewed"
-      )
-    );
-});
-
 const isUsernameAvailable = asyncHandler(
   async (req: Request, res: Response) => {
     const { username } = req.params;
@@ -881,6 +836,93 @@ const getSavedPosts = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
+const getSessions = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+  const token =
+    req.cookies?.token || req.header("Authorization")?.replace("Bearer ", "");
+
+  const user = await User.findById(_id, "sessions");
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const sessions = user.sessions.map((session) => {
+    if (session.token !== token) {
+      session.token = "";
+    }
+    return session;
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, sessions, "Sessions found successfully"));
+});
+
+const removeSession = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+  const { sessionId } = req.params;
+
+  if (!sessionId) {
+    throw new ApiError(400, "Session id is required");
+  }
+
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (
+    !user.sessions.some((session) => session?._id?.toString() === sessionId)
+  ) {
+    throw new ApiError(404, "Session not found");
+  }
+
+  user.sessions = user.sessions.filter(
+    (session) => session?._id?.toString() !== sessionId
+  );
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Session deleted successfully"));
+});
+
+const removeAllSessions = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+  const token =
+    req.cookies?.token || req.header("Authorization")?.replace("Bearer ", "");
+
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.sessions = user.sessions.filter((session) => session.token === token);
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, user.sessions, "All sessions deleted successfully")
+    );
+});
+
+const clearCookies = asyncHandler(async (req: Request, res: Response) => {
+  return res
+    .status(200)
+    .clearCookie("token")
+    .json(new ApiResponse(200, {}, "Cookies cleared"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -896,7 +938,6 @@ export {
   getProfile,
   blockUser,
   unblockUser,
-  renewAccessToken,
   isUsernameAvailable,
   resendEmail,
   searchUsers,
@@ -905,4 +946,8 @@ export {
   savePost,
   unsavePost,
   getSavedPosts,
+  getSessions,
+  removeSession,
+  clearCookies,
+  removeAllSessions,
 };

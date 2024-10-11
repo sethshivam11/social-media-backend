@@ -31,7 +31,9 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
     isGroupChat: false,
   });
   if (chatExists) {
-    throw new ApiError(400, "Chat already exists");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, chatExists, "Chat already exists"));
   }
 
   const chat = await Chat.create({
@@ -500,7 +502,21 @@ const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Chat not found");
   }
 
-  await chat.updateOne({ $pull: { users: _id, admin: _id } });
+  if (chat.users.length === 1) {
+    await chat.deleteOne();
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Group left successfully"));
+  } else if (chat.users.length === 2) {
+    const filteredUsers = chat.users.filter(
+      (user) => user.toString() !== _id.toString()
+    );
+    chat.users = filteredUsers;
+    chat.admin = filteredUsers;
+    await chat.save();
+  } else {
+    await chat.updateOne({ $pull: { users: _id, admin: _id } });
+  }
 
   chat.users.forEach((participant) => {
     const participantId = participant.toString();
