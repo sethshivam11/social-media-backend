@@ -130,7 +130,7 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, fullName, avatar, username } = req.user;
+  const { _id } = req.user;
 
   const { content } = req.body;
   const { messageId } = req.params;
@@ -299,7 +299,7 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
   const messagesCount = await Message.countDocuments({ chat: chatId });
   const messages = await Message.find({ chat: chatId })
     .populate("sender reacts", "username fullName avatar")
-    .sort({ createdAt: 1 })
+    .sort({ createdAt: -1 })
     .limit(limit)
     .skip((pageNo - 1) * limit);
 

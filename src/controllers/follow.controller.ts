@@ -227,10 +227,10 @@ const getFollowings = asyncHandler(async (req: Request, res: Response) => {
   });
 
   if (!follow || !follow.followings.length) {
-    throw new ApiError(404, "Followers not found");
+    throw new ApiError(404, "Followings not found");
   }
 
-  return res.status(200).json(new ApiResponse(200, follow, "Followers found"));
+  return res.status(200).json(new ApiResponse(200, follow, "Followings found"));
 });
 
 export { follow, unfollow, getFollow, getFollowers, getFollowings };

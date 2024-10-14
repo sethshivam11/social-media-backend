@@ -69,8 +69,10 @@ chatSchema.pre("save", function (next) {
 chatSchema.methods.getParticipantsInfo = (
   participants: string[] | ObjectId[]
 ) => {
-  return User.findById({ $in: participants }).select(
-    "fullName username avatar"
+  return Promise.all(
+    participants.map((participant) =>
+      User.findById(participant, "avatar username fullName")
+    )
   );
 };
 

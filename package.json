@@ -34,7 +34,7 @@
     "mongoose": "^8.1.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.13",
-    "socket.io": "^4.7.4"
+    "socket.io": "^4.8.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

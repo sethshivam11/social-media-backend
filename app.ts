@@ -78,3 +78,26 @@ initializeSocket(io);
 app.use(errorHandler);
 
 export default httpServer;
+
+// Reload website every 5 minutes (or provided time)
+function reloadWebsite() {
+  fetch(process.env.PUBLIC_URL as string || "https://sociial.onrender.com")
+    .then((response) => {
+      console.log(
+        `Reloaded at ${new Date().toLocaleString("en-IN")}: Status Code ${
+          response.status
+        }`
+      );
+    })
+    .catch((error) => {
+      console.error(
+        `Error reloading at ${new Date().toLocaleString("en-IN")}:`,
+        error.message
+      );
+    });
+}
+
+setInterval(
+  reloadWebsite,
+  parseInt(process.env.RELOAD_INTERVAL as string) || 1000 * 60 * 5
+);

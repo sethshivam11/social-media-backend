@@ -14,6 +14,7 @@ import { emitSocketEvent } from "../socket";
 import { NotificationModel } from "../models/notification.model";
 import sendNotification from "../helpers/firebase";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
+import { Message } from "../models/message.model";
 
 const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -31,6 +32,13 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
     isGroupChat: false,
   });
   if (chatExists) {
+    await chatExists.populate({
+      path: "users",
+      select: "fullName username avatar",
+      model: "user",
+      strictPopulate: false,
+    });
+
     return res
       .status(200)
       .json(new ApiResponse(200, chatExists, "Chat already exists"));
@@ -38,11 +46,29 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
 
   const chat = await Chat.create({
     users: [_id, userId],
+    populate: {
+      path: "users",
+      select: "fullName username avatar",
+      model: "user",
+      strictPopulate: false,
+    },
   });
 
   if (!chat) {
     throw new ApiError(400, "Something went wrong, while creating chat");
   }
+
+  const populatedUsers = await chat.populate<{ users: { _id: string }[] }>({
+    path: "users",
+    select: "fullName username avatar",
+    model: "user",
+    strictPopulate: false,
+  });
+
+  populatedUsers.users = populatedUsers.users.filter(
+    (user) => user._id.toString() !== _id.toString()
+  );
+
   emitSocketEvent(userId, ChatEventEnum.NEW_CHAT_EVENT, {
     fullName,
     username,
@@ -51,7 +77,7 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, chat, "Chat created successfully"));
+    .json(new ApiResponse(200, populatedUsers, "Chat created successfully"));
 });
 
 const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
@@ -60,15 +86,16 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, fullName, username, avatar } = req.user;
 
-  const { participants, groupName, groupDescription } = req.body;
+  const { groupName, groupDescription } = req.body;
+  let { participants } = req.body;
+
   if (!participants || !groupName) {
     cleanupFiles();
     throw new ApiError(400, "participants and groupName are required");
   }
 
-  if (!(participants instanceof Array)) {
-    cleanupFiles();
-    throw new ApiError(400, "Participants must be an array");
+  if (typeof participants === "string") {
+    participants = [participants];
   }
 
   let groupIcon = DEFAULT_GROUP_ICON;
@@ -100,6 +127,19 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   if (!groupChat) {
     throw new ApiError(400, "Something went wrong, while creating group chat");
   }
+
+  const populatedUsers = await groupChat.populate<{ users: { _id: string }[] }>(
+    {
+      path: "users",
+      select: "fullName username avatar",
+      model: "user",
+      strictPopulate: false,
+    }
+  );
+
+  populatedUsers.users = populatedUsers.users.filter(
+    (user) => user._id.toString() !== _id.toString()
+  );
 
   participants.forEach(async (participant: string) => {
     emitSocketEvent(participant, ChatEventEnum.NEW_GROUP_CHAT_EVENT, {
@@ -137,7 +177,9 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, groupChat, "Group chat created successfully"));
+    .json(
+      new ApiResponse(200, populatedUsers, "Group chat created successfully")
+    );
 });
 
 const getChats = asyncHandler(async (req: Request, res: Response) => {
@@ -279,6 +321,7 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
     const notificationPreference = await NotificationPreferences.findOne({
       user: participant,
     });
+
     if (
       notificationPreference &&
       notificationPreference.firebaseTokens &&
@@ -300,7 +343,9 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Participants added successfully"));
+    .json(
+      new ApiResponse(200, participantsInfo, "Participants added successfully")
+    );
 });
 
 const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
@@ -333,7 +378,12 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Participants already removed");
   }
 
-  await chat.updateOne({ $pull: { users: { $in: participantsToRemove } } });
+  await chat.updateOne({
+    $pull: {
+      users: { $in: participantsToRemove },
+      admin: { $in: participantsToRemove },
+    },
+  });
 
   const participantsInfo = await chat.getParticipantsInfo(participantsToRemove);
   chat.users.forEach((participant) => {
@@ -356,6 +406,7 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
     const notificationPreference = await NotificationPreferences.findOne({
       user: participant,
     });
+
     if (
       notificationPreference &&
       notificationPreference.firebaseTokens &&
@@ -377,7 +428,13 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Participants removed successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        participantsInfo,
+        "Participants removed successfully"
+      )
+    );
 });
 
 const updateGroupDetails = asyncHandler(async (req: Request, res: Response) => {
@@ -386,7 +443,7 @@ const updateGroupDetails = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id, username, avatar, fullName } = req.user;
 
-  const { chatId, groupName } = req.body;
+  const { chatId, groupName, description } = req.body;
   const groupIconLocalPath = (req.file as File)?.path;
 
   if (!chatId || !(groupIconLocalPath || groupName)) {
@@ -416,11 +473,11 @@ const updateGroupDetails = asyncHandler(async (req: Request, res: Response) => {
     }
 
     await deleteFromCloudinary(chat.groupIcon as string);
-
     chat.groupIcon = groupIcon.secure_url;
   }
 
   if (groupName) chat.groupName = groupName;
+  if (description || description === "") chat.description = description;
   await chat.save();
 
   chat.users.forEach((participant) => {
@@ -456,6 +513,16 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
   if (!chat.admin.includes(_id)) {
     throw new ApiError(403, "You are not authorized to delete group");
   }
+
+  const messages = await Message.find({ "attachment.url": { $exists: true } });
+  await Promise.all(
+    messages.map((message) => {
+      if (message?.attachment?.url) {
+        deleteFromCloudinary(message.attachment.url);
+      }
+    })
+  );
+  await Message.deleteMany({ chat: chat._id });
 
   if (chat.groupIcon !== DEFAULT_GROUP_ICON)
     await deleteFromCloudinary(chat.groupIcon as string);
@@ -503,7 +570,20 @@ const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (chat.users.length === 1) {
+    const messages = await Message.find({
+      "attachment.url": { $exists: true },
+    });
+    await Promise.all(
+      messages.map((message) => {
+        if (message?.attachment?.url) {
+          deleteFromCloudinary(message.attachment.url);
+        }
+      })
+    );
+
+    await Message.deleteMany({ chat: chat._id });
     await chat.deleteOne();
+
     return res
       .status(200)
       .json(new ApiResponse(200, {}, "Group left successfully"));
@@ -576,7 +656,7 @@ const removeGroupIcon = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, chat, "Group icon removed successfully"));
+    .json(new ApiResponse(200, {image: chat.groupIcon}, "Group icon removed successfully"));
 });
 
 const makeAdmin = asyncHandler(async (req: Request, res: Response) => {
@@ -622,7 +702,7 @@ const makeAdmin = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, chat, "Admin added successfully"));
+    .json(new ApiResponse(200, {}, "Admin added successfully"));
 });
 
 const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
@@ -655,7 +735,8 @@ const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
 
   await chat.updateOne({ $pull: { admin: userId } }, { new: true });
 
-  const getUsersInParticipants = await chat.populate([userId]);
+  const getUsersInParticipants = await chat.getParticipantsInfo([userId]);
+
   chat.users.forEach((participant) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;
@@ -667,7 +748,7 @@ const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, chat, "Admin removed successfully"));
+    .json(new ApiResponse(200, {}, "Admin removed successfully"));
 });
 
 const getMembers = asyncHandler(async (req: Request, res: Response) => {

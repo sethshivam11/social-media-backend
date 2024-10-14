@@ -65,17 +65,17 @@ const negotiateEvent = (socket: Socket) => {
 const initializeSocket = (io: Server) => {
   return io.on("connection", async (socket: Socket) => {
     try {
-      const accessToken = socket.handshake.headers.authorization?.replace(
+      const token = socket.handshake.headers.authorization?.replace(
         "Bearer ",
         ""
       );
-      if (!accessToken) {
+      if (!token) {
         throw new ApiError(401, "Unauthorized handshake, token not found");
       }
 
       const decodedToken = (await jwt.verify(
-        accessToken,
-        process.env.ACCESS_TOKEN_SECRET as string
+        token,
+        process.env.TOKEN_SECRET as string
       )) as jwt.JwtPayload;
 
       const user = await User.findById(decodedToken._id);
