@@ -5,6 +5,8 @@ import { ApiError } from "../utils/ApiError";
 import { User } from "../models/user.model";
 import { io } from "../../app";
 
+let onlineUsers: string[] = [];
+
 const chatJoinEvent = (socket: Socket) => {
   socket.on(ChatEventEnum.NEW_CHAT_EVENT, (chatId) => {
     console.log("New chat event chatId: ", chatId);
@@ -86,6 +88,10 @@ const initializeSocket = (io: Server) => {
 
       socket.user = user;
       socket.join(user?._id.toString());
+
+      onlineUsers.push(socket.user._id.toString());
+      io.emit(ChatEventEnum.GET_USERS, onlineUsers);
+
       socket.emit(ChatEventEnum.CONNECTED_EVENT);
       console.log("User connected 🚀, userId:", user._id.toString());
 
@@ -103,9 +109,24 @@ const initializeSocket = (io: Server) => {
           "User disconnected 🚫, userId:",
           socket.user?._id.toString()
         );
+        onlineUsers = onlineUsers.filter(
+          (userId) => userId !== socket.user?._id.toString()
+        );
         if (socket.user?._id) {
           socket.leave(socket.user._id.toString());
         }
+        io.emit(ChatEventEnum.GET_USERS, onlineUsers);
+      });
+
+      socket.on(ChatEventEnum.OFFLINE_EVENT, () => {
+        console.log(
+          "User went offline 🚫, userId:",
+          socket.user?._id.toString()
+        );
+        onlineUsers = onlineUsers.filter(
+          (userId) => userId !== socket.user?._id.toString()
+        );
+        io.emit(ChatEventEnum.GET_USERS, onlineUsers);
       });
     } catch (err) {
       socket.emit(

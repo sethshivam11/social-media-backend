@@ -21,7 +21,7 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
 
-  const { _id, fullName, username, avatar } = req.user;
+  const { _id, username, avatar, fullName } = req.user;
   const { userId } = req.body;
   if (!userId) {
     throw new ApiError(400, "User is required");
@@ -65,15 +65,19 @@ const createOneToOneChat = asyncHandler(async (req: Request, res: Response) => {
     strictPopulate: false,
   });
 
+  emitSocketEvent(userId, ChatEventEnum.NEW_CHAT_EVENT, {
+    chat: {
+      ...populatedUsers.toObject(),
+      users: populatedUsers.users.filter(
+        (user) => user._id.toString() !== userId.toString()
+      ),
+    },
+    user: { _id, username, fullName, avatar },
+  });
+
   populatedUsers.users = populatedUsers.users.filter(
     (user) => user._id.toString() !== _id.toString()
   );
-
-  emitSocketEvent(userId, ChatEventEnum.NEW_CHAT_EVENT, {
-    fullName,
-    username,
-    avatar,
-  });
 
   return res
     .status(200)
@@ -84,7 +88,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, fullName, username, avatar } = req.user;
+  const { _id, username, avatar, fullName } = req.user;
 
   const { groupName, groupDescription } = req.body;
   let { participants } = req.body;
@@ -137,15 +141,18 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
     }
   );
 
-  populatedUsers.users = populatedUsers.users.filter(
-    (user) => user._id.toString() !== _id.toString()
-  );
-
   participants.forEach(async (participant: string) => {
+    const filteredUsers = populatedUsers.users.filter(
+      (user) => user._id.toString() !== participant
+    );
     emitSocketEvent(participant, ChatEventEnum.NEW_GROUP_CHAT_EVENT, {
-      fullName,
-      username,
-      avatar,
+      chat: { ...populatedUsers.toObject(), users: filteredUsers },
+      user: {
+        _id,
+        username,
+        avatar,
+        fullName,
+      },
     });
     if (participant !== _id) {
       await NotificationModel.create({
@@ -174,6 +181,10 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
       );
     }
   });
+
+  populatedUsers.users = populatedUsers.users.filter(
+    (user) => user._id.toString() !== _id.toString()
+  );
 
   return res
     .status(200)
@@ -305,8 +316,9 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.NEW_PARTICIPANT_ADDED_EVENT, {
-      participantsInfo,
-      user: { fullName, avatar, username },
+      participants: participantsInfo,
+      chat,
+      user: { _id, fullName, avatar, username },
     });
   });
 
@@ -390,8 +402,9 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.PARTICIPANT_REMOVED_EVENT, {
-      participantsInfo,
-      user: { fullName, avatar, username },
+      participants: participantsToRemove,
+      chat,
+      user: { _id, fullName, avatar, username },
     });
   });
 
@@ -485,7 +498,7 @@ const updateGroupDetails = asyncHandler(async (req: Request, res: Response) => {
     if (participantId === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.GROUP_DETAILS_UPDATED, {
       chat,
-      user: { fullName, avatar, username },
+      user: { _id, fullName, avatar, username },
     });
   });
 
@@ -533,9 +546,9 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
   chat.users.forEach(async (participant) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;
-    emitSocketEvent(participantId, ChatEventEnum.DELETE_GROUP_EVENT, {
+    emitSocketEvent(participantId, ChatEventEnum.GROUP_DELETE_EVENT, {
       chat,
-      user: { fullName, avatar, username },
+      user: { _id, fullName, avatar, username },
     });
     if (participantId !== _id.toString()) {
       await NotificationModel.create({
@@ -595,7 +608,17 @@ const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
     chat.admin = filteredUsers;
     await chat.save();
   } else {
-    await chat.updateOne({ $pull: { users: _id, admin: _id } });
+    chat.users = chat.users.filter(
+      (user) => user.toString() !== _id.toString()
+    );
+    chat.admin = chat.admin.filter(
+      (user) => user.toString() !== _id.toString()
+    );
+
+    if (chat.admin.length === 0) {
+      chat.admin = [chat.users[0]];
+    }
+    await chat.save();
   }
 
   chat.users.forEach((participant) => {
@@ -603,7 +626,7 @@ const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
     if (participantId === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.GROUP_LEAVE_EVENT, {
       chat,
-      user: { fullName, avatar, username },
+      user: { _id, fullName, avatar, username },
     });
   });
 
@@ -650,13 +673,19 @@ const removeGroupIcon = asyncHandler(async (req: Request, res: Response) => {
     if (participantId === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.GROUP_DETAILS_UPDATED, {
       chat,
-      user: { fullName, avatar, username },
+      user: { _id, fullName, avatar, username },
     });
   });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {image: chat.groupIcon}, "Group icon removed successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { image: chat.groupIcon },
+        "Group icon removed successfully"
+      )
+    );
 });
 
 const makeAdmin = asyncHandler(async (req: Request, res: Response) => {
@@ -695,8 +724,9 @@ const makeAdmin = asyncHandler(async (req: Request, res: Response) => {
     const participantId = participant.toString();
     if (participant.toString() === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.NEW_ADMIN_EVENT, {
-      admin: getUsersInParticipants,
-      user: { fullName, avatar, username },
+      newAdmins: getUsersInParticipants,
+      chat,
+      user: { _id, fullName, avatar, username },
     });
   });
 
@@ -741,8 +771,8 @@ const removeAdmin = asyncHandler(async (req: Request, res: Response) => {
     const participantId = participant.toString();
     if (participantId === _id.toString()) return;
     emitSocketEvent(participantId, ChatEventEnum.ADMIN_REMOVE_EVENT, {
-      removed: getUsersInParticipants,
-      user: { fullName, avatar, username },
+      removedAdmins: getUsersInParticipants,
+      user: { _id, fullName, avatar, username },
     });
   });
 

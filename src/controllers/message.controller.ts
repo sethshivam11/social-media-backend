@@ -16,10 +16,6 @@ import { NotificationPreferences } from "../models/notificationpreferences.model
 import sendNotification from "../helpers/firebase";
 import { Chat } from "../models/chat.model";
 
-// limit number of messages for pagination
-const limit = 40;
-let pageNo = 1;
-
 const fetchUsersInChat = (chatId: mongoose.ObjectId) => Chat.findById(chatId);
 
 const sendMessage = asyncHandler(async (req: Request, res: Response) => {
@@ -289,19 +285,10 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "ChatId is required");
   }
 
-  if (page) {
-    pageNo = parseInt(page as string);
-    if (pageNo <= 0) {
-      pageNo = 1;
-    }
-  }
-
   const messagesCount = await Message.countDocuments({ chat: chatId });
   const messages = await Message.find({ chat: chatId })
     .populate("sender reacts", "username fullName avatar")
     .sort({ createdAt: -1 })
-    .limit(limit)
-    .skip((pageNo - 1) * limit);
 
   if (messages.length === 0 || !messages) {
     throw new ApiError(404, "No messages found");

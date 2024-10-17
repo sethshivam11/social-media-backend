@@ -43,6 +43,7 @@ app.use(cookieParser());
 
 // Route imports
 import userRouter from "./src/routes/user.route";
+import callRouter from "./src/routes/call.route";
 import followRouter from "./src/routes/follow.route";
 import postRouter from "./src/routes/post.route";
 import commmentRouter from "./src/routes/comment.route";
@@ -55,6 +56,7 @@ import notificationPreferenceRouter from "./src/routes/notificationpreference.ro
 
 // Routes declarations
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/calls", callRouter);
 app.use("/api/v1/follow", followRouter);
 app.use("/api/v1/posts", postRouter);
 app.use("/api/v1/comments", commmentRouter);
@@ -81,7 +83,7 @@ export default httpServer;
 
 // Reload website every 5 minutes (or provided time)
 function reloadWebsite() {
-  fetch(process.env.PUBLIC_URL as string || "https://sociial.onrender.com")
+  fetch((process.env.PUBLIC_URL as string) || "https://sociial.onrender.com")
     .then((response) => {
       console.log(
         `Reloaded at ${new Date().toLocaleString("en-IN")}: Status Code ${
@@ -97,7 +99,9 @@ function reloadWebsite() {
     });
 }
 
-setInterval(
-  reloadWebsite,
-  parseInt(process.env.RELOAD_INTERVAL as string) || 1000 * 60 * 5
-);
+if (process.env.NODE_ENV === "production") {
+  setInterval(
+    reloadWebsite,
+    parseInt(process.env.RELOAD_INTERVAL as string) || 1000 * 60 * 5
+  );
+}
