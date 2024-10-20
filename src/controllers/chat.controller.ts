@@ -530,8 +530,12 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
   const messages = await Message.find({ "attachment.url": { $exists: true } });
   await Promise.all(
     messages.map((message) => {
-      if (message?.attachment?.url) {
-        deleteFromCloudinary(message.attachment.url);
+      if (
+        message?.kind === "media" ||
+        message?.kind === "audio" ||
+        message?.kind === "document"
+      ) {
+        deleteFromCloudinary(message.content);
       }
     })
   );
@@ -540,7 +544,6 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
   if (chat.groupIcon !== DEFAULT_GROUP_ICON)
     await deleteFromCloudinary(chat.groupIcon as string);
 
-  await chat.deleteMessages();
   await chat.deleteOne();
 
   chat.users.forEach(async (participant) => {
@@ -588,8 +591,12 @@ const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
     });
     await Promise.all(
       messages.map((message) => {
-        if (message?.attachment?.url) {
-          deleteFromCloudinary(message.attachment.url);
+        if (
+          message?.kind === "media" ||
+          message?.kind === "audio" ||
+          message?.kind === "document"
+        ) {
+          deleteFromCloudinary(message.content);
         }
       })
     );

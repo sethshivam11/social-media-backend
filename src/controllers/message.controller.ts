@@ -26,46 +26,54 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   const { _id, username, avatar } = req.user;
 
   const attachmentLocalFile = req.file as File;
-  const { message, chatId, kind, reply } = req.body;
+  const { message, chatId, kind, reply, post } = req.body;
 
-  if (!(message || attachmentLocalFile) || !chatId) {
-    throw new ApiError(400, "Message or attachment and chatId is required");
+  if (!(message || attachmentLocalFile || post) || !chatId) {
+    throw new ApiError(
+      400,
+      "Message, post or attachment and chatId is required"
+    );
   }
 
-  let attachment: {
-    url: string;
-    kind: "image" | "video" | "audio" | "document";
-  } | null = null;
+  let messageKind:
+    | "media"
+    | "audio"
+    | "document"
+    | "message"
+    | "post"
+    | "location" = kind;
+  let content = message;
+
   if (attachmentLocalFile) {
     const upload = await uploadToCloudinary(
       attachmentLocalFile.path,
       "messages"
     );
     if (upload && upload.secure_url) {
-      attachment = { kind: "document", url: upload.secure_url };
+      content = upload.secure_url;
       switch (attachmentLocalFile.mimetype.split("/")[0]) {
         case "image":
-          attachment.kind = "image";
+          messageKind = "media";
           break;
         case "video":
-          attachment.kind = "video";
+          messageKind = "media";
           break;
         case "audio":
-          attachment.kind = "audio";
+          messageKind = "audio";
           break;
         default:
-          attachment.kind = "document";
+          messageKind = "document";
           break;
       }
     }
   }
 
   const msg = await Message.create({
-    content: message,
+    content,
     chat: chatId,
     sender: _id,
-    kind,
-    attachment,
+    kind: messageKind,
+    post,
     reply: {
       username,
       content: reply,
@@ -75,8 +83,8 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!msg) {
     throw new ApiError(500, "Message not sent");
   }
-  await msg.populate("sender", "username fullName avatar");
 
+  await msg.populate("sender", "username fullName avatar");
   await Chat.findByIdAndUpdate(
     chatId,
     {
@@ -247,8 +255,12 @@ const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
   if (message.sender.toString() !== _id.toString()) {
     throw new ApiError(403, "You can't delete this message");
   }
-  if (message.attachment.url) {
-    await deleteFromCloudinary(message.attachment.url);
+  if (
+    message.kind === "media" ||
+    message.kind === "audio" ||
+    message.kind === "document"
+  ) {
+    await deleteFromCloudinary(message.content);
   }
 
   await message.deleteOne();
@@ -280,15 +292,15 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
 
-  const { chatId, page } = req.query;
+  const { chatId } = req.query;
   if (!chatId) {
     throw new ApiError(400, "ChatId is required");
   }
 
-  const messagesCount = await Message.countDocuments({ chat: chatId });
   const messages = await Message.find({ chat: chatId })
+    .populate("post", "media kind thumbnail caption user")
     .populate("sender reacts", "username fullName avatar")
-    .sort({ createdAt: -1 })
+    .sort({ createdAt: 1 });
 
   if (messages.length === 0 || !messages) {
     throw new ApiError(404, "No messages found");
@@ -296,9 +308,7 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, { messages, max: messagesCount }, "Messages fetched")
-    );
+    .json(new ApiResponse(200, messages, "Messages fetched"));
 });
 
 const updateMessage = asyncHandler(async (req: Request, res: Response) => {

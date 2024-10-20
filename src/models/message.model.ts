@@ -4,16 +4,13 @@ interface MessageInterface extends Document {
   sender: ObjectId;
   chat: ObjectId;
   content: string;
-  kind?: "message" | "location" | "call" | "media" | "audio" | "document";
+  kind?: "message" | "location" | "media" | "audio" | "document" | "post";
   reacts: { content: string; user: ObjectId }[];
-  attachment: {
-    url: string;
-    kind: "image" | "video" | "audio" | "document";
-  };
   reply?: {
     username: string;
     content: string;
   };
+  post?: ObjectId;
 }
 
 const messageSchema: Schema<MessageInterface> = new Schema(
@@ -32,20 +29,18 @@ const messageSchema: Schema<MessageInterface> = new Schema(
       type: String,
       trim: true,
     },
-    attachment: {
-      url: String,
-      kind: {
-        type: String,
-        enum: ["image", "video", "audio", "document"],
-      },
-    },
     kind: {
       type: String,
-      enum: ["message", "location", "call", "media", "audio", "document"],
+      default: "message",
+      enum: ["message", "location", "media", "audio", "document", "post"],
     },
     reply: {
       username: String,
       content: String,
+    },
+    post: {
+      type: Schema.Types.ObjectId,
+      ref: "post",
     },
     reacts: [
       {
