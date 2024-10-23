@@ -4,7 +4,7 @@ interface MessageInterface extends Document {
   sender: ObjectId;
   chat: ObjectId;
   content: string;
-  kind?: "message" | "location" | "media" | "audio" | "document" | "post";
+  kind?: "message" | "location" | "image" | "video" | "audio" | "document" | "post";
   reacts: { content: string; user: ObjectId }[];
   reply?: {
     username: string;
@@ -32,7 +32,15 @@ const messageSchema: Schema<MessageInterface> = new Schema(
     kind: {
       type: String,
       default: "message",
-      enum: ["message", "location", "media", "audio", "document", "post"],
+      enum: [
+        "message",
+        "location",
+        "image",
+        "video",
+        "audio",
+        "document",
+        "post",
+      ],
     },
     reply: {
       username: String,

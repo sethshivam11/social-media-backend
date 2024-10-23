@@ -23,7 +23,9 @@ export const ChatEventEnum = Object.freeze({
   NEW_CALL_EVENT: "newCall",
   CALL_ACCEPTED_EVENT: "callAccepted",
   CALL_DISCONNECTED_EVENT: "callDisconnected",
-  NEGOTIATE_EVENT: "negotiateCall",
+  CALL_AUDIO_EVENT: "callAudio",
+  CALL_VIDEO_EVENT: "callVideo",
+  CALL_CAMERA_SWITCH_EVENT: "callCameraSwitched",
 });
 
 export const DB_NAME = "sociial";

@@ -8,6 +8,7 @@ import {
   reactMessage,
   sendMessage,
   unreactMessage,
+  sharePost,
 } from "../controllers/message.controller";
 import { upload } from "../middlewares/multer.middleware";
 
@@ -18,6 +19,8 @@ router.use(verifyJWT);
 router.route("/get").get(getMessages);
 
 router.route("/send").post(upload.single("attachment"), sendMessage);
+
+router.route("/sharePost").post(sharePost);
 
 router.route("/react/:messageId").patch(reactMessage);
 

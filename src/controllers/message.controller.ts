@@ -36,7 +36,8 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   }
 
   let messageKind:
-    | "media"
+    | "image"
+    | "video"
     | "audio"
     | "document"
     | "message"
@@ -53,10 +54,10 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
       content = upload.secure_url;
       switch (attachmentLocalFile.mimetype.split("/")[0]) {
         case "image":
-          messageKind = "media";
+          messageKind = "image";
           break;
         case "video":
-          messageKind = "media";
+          messageKind = "video";
           break;
         case "audio":
           messageKind = "audio";
@@ -75,7 +76,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
     kind: messageKind,
     post,
     reply: {
-      username,
+      username: reply ? username : undefined,
       content: reply,
     },
   });
@@ -130,11 +131,83 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   return res.status(201).json(new ApiResponse(201, msg, "Message sent"));
 });
 
+const sharePost = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id, username, avatar, fullName } = req.user;
+
+  const { postId, people } = req.body;
+  if (!postId || !people || people.length === 0) {
+    throw new ApiError(400, "ChatId and postId are required");
+  }
+
+  const chats = await Chat.find({
+    users: { $all: [_id], $in: people },
+    isGroupChat: false,
+  });
+
+  const chatMap = new Map();
+  chats.map((chat) => {
+    const otherUser = chat.users.find(
+      (user) => user.toString() !== _id.toString()
+    );
+    chatMap.set(otherUser, chat);
+  });
+
+  await Promise.all(
+    people.map(async (user: string) => {
+      let chat = chatMap.get(user);
+      if (!chat) {
+        chat = await Chat.create({
+          users: [_id, user],
+          isGroupChat: false,
+        });
+      }
+
+      const message = await Message.create({
+        kind: "post",
+        sender: _id,
+        post: postId,
+        chat: chat._id,
+      });
+
+      emitSocketEvent(user, ChatEventEnum.MESSAGE_RECIEVED_EVENT, {
+        user: { _id, username, fullName, avatar },
+        ...message.toObject(),
+      });
+
+      const notificationPreference = await NotificationPreferences.findOne({
+        user,
+      });
+      if (
+        notificationPreference?.firebaseTokens.length &&
+        notificationPreference.pushNotifications.newMessages
+      ) {
+        await Promise.all(
+          notificationPreference.firebaseTokens.map((token) => {
+            sendNotification({
+              title: "New Message",
+              body: message
+                ? `${username}: ${message}`
+                : `You have a new message from ${username}`,
+              token,
+              image: avatar,
+            });
+          })
+        );
+      }
+    })
+  );
+
+  return res.status(200).json(new ApiResponse(200, {}, "Post shared"));
+});
+
 const reactMessage = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, avatar, fullName, username } = req.user;
 
   const { content } = req.body;
   const { messageId } = req.params;
@@ -172,10 +245,17 @@ const reactMessage = asyncHandler(async (req: Request, res: Response) => {
     chats.users.forEach(async (user) => {
       if (user.toString() === _id.toString()) return;
       emitSocketEvent(user.toString(), ChatEventEnum.NEW_REACT_EVENT, {
-        user: _id,
+        user: { _id, username, fullName, avatar },
         content: reaction.content,
         chat: message.chat,
         messageId: message._id,
+        message: {
+          content:
+            message.content.length > 30
+              ? `${message.content.slice(0, 30)}...`
+              : message.content,
+          kind: message.kind,
+        },
       });
     });
   }
@@ -256,7 +336,8 @@ const deleteMessage = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, "You can't delete this message");
   }
   if (
-    message.kind === "media" ||
+    message.kind === "image" ||
+    message.kind === "video" ||
     message.kind === "audio" ||
     message.kind === "document"
   ) {
@@ -298,9 +379,21 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const messages = await Message.find({ chat: chatId })
-    .populate("post", "media kind thumbnail caption user")
+    .populate({
+      path: "post",
+      select: "media kind thumbnail caption user",
+      model: "post",
+      populate: {
+        path: "user",
+        model: "user",
+        select: "username fullName avatar",
+        strictPopulate: false,
+      },
+      strictPopulate: false,
+    })
     .populate("sender reacts", "username fullName avatar")
     .sort({ createdAt: 1 });
+  // .populate("post", "media kind thumbnail caption user")
 
   if (messages.length === 0 || !messages) {
     throw new ApiError(404, "No messages found");
@@ -375,6 +468,7 @@ export {
   getReacts,
   getMessages,
   sendMessage,
+  sharePost,
   reactMessage,
   deleteMessage,
   unreactMessage,

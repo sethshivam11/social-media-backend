@@ -531,7 +531,8 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
   await Promise.all(
     messages.map((message) => {
       if (
-        message?.kind === "media" ||
+        message?.kind === "image" ||
+        message?.kind === "video" ||
         message?.kind === "audio" ||
         message?.kind === "document"
       ) {
@@ -592,7 +593,8 @@ const leaveGroup = asyncHandler(async (req: Request, res: Response) => {
     await Promise.all(
       messages.map((message) => {
         if (
-          message?.kind === "media" ||
+          message?.kind === "image" ||
+          message?.kind === "video" ||
           message?.kind === "audio" ||
           message?.kind === "document"
         ) {
