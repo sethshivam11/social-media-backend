@@ -152,7 +152,7 @@ const sharePost = asyncHandler(async (req: Request, res: Response) => {
     const otherUser = chat.users.find(
       (user) => user.toString() !== _id.toString()
     );
-    chatMap.set(otherUser, chat);
+    if (otherUser) chatMap.set(otherUser.toString(), chat);
   });
 
   await Promise.all(
@@ -188,9 +188,7 @@ const sharePost = asyncHandler(async (req: Request, res: Response) => {
           notificationPreference.firebaseTokens.map((token) => {
             sendNotification({
               title: "New Message",
-              body: message
-                ? `${username}: ${message}`
-                : `You have a new message from ${username}`,
+              body: `${username} shared a post`,
               token,
               image: avatar,
             });

@@ -14,6 +14,10 @@ import sendNotification from "../helpers/firebase";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import { Follow } from "../models/follow.model";
 import { v2 as cloudinary } from "cloudinary";
+import { Chat } from "../models/chat.model";
+import { Message } from "../models/message.model";
+import { emitSocketEvent } from "../socket";
+import { ChatEventEnum } from "../constants";
 
 const createStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -73,19 +77,136 @@ const createStory = asyncHandler(async (req: Request, res: Response) => {
     user: _id,
     media,
     blockedTo: blocked,
-    populate: {
-      model: "user",
-      path: "user",
-      select: "username fullName avatar",
-      strictPopulate: false,
-    },
   });
 
   if (!story) {
     throw new ApiError(500, "Story not uploaded");
   }
 
+  await story.populate({
+    model: "user",
+    path: "user",
+    select: "username fullName avatar",
+    strictPopulate: false,
+  });
+
   return res.status(201).json(new ApiResponse(201, story, "Story uploaded"));
+});
+
+const replyStory = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id, username, avatar, fullName } = req.user;
+
+  const { storyId, content } = req.body;
+  if (!storyId || !content) {
+    throw new ApiError(404, "storyId and message is required");
+  }
+
+  const story = await Story.findById(storyId);
+  if (!story) {
+    throw new ApiError(404, "Story not found");
+  }
+
+  const chat = await Chat.findOne({
+    users: [_id, story.user],
+    isGroupChat: false,
+  });
+
+  if (!chat) {
+    const newChat = await Chat.create({
+      users: [_id, story.user],
+      isGroupChat: false,
+    });
+
+    if (!newChat) {
+      throw new ApiError(404, "Cannot send reply");
+    }
+
+    const message = await Message.create({
+      content,
+      sender: _id,
+      chat: newChat._id,
+      kind: "message",
+      reply: {
+        username,
+        content: "Replied to your story",
+      },
+    });
+
+    emitSocketEvent(
+      story.user.toString(),
+      ChatEventEnum.MESSAGE_RECIEVED_EVENT,
+      {
+        user: { _id, username, fullName, avatar },
+        ...message.toObject(),
+      }
+    );
+
+    const notificationPreference = await NotificationPreferences.findOne({
+      user: _id,
+    });
+    if (
+      notificationPreference?.firebaseTokens.length &&
+      notificationPreference.pushNotifications.newMessages
+    ) {
+      await Promise.all(
+        notificationPreference.firebaseTokens.map((token) => {
+          sendNotification({
+            title: "New Message",
+            body: `${username} replied to your story`,
+            token,
+            image: avatar,
+          });
+        })
+      );
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Reply sent successfully"));
+  }
+
+  const message = await Message.create({
+    users: [_id, story.user],
+    sender: _id,
+    chat: chat._id,
+    content,
+    kind: "message",
+    reply: {
+      username,
+      content: "Replied to your story",
+    },
+  });
+
+  emitSocketEvent(story.user.toString(), ChatEventEnum.MESSAGE_RECIEVED_EVENT, {
+    user: { _id, username, fullName, avatar },
+    ...message.toObject(),
+  });
+
+  const notificationPreference = await NotificationPreferences.findOne({
+    user: _id,
+  });
+  if (
+    notificationPreference?.firebaseTokens.length &&
+    notificationPreference.pushNotifications.newMessages
+  ) {
+    await Promise.all(
+      notificationPreference.firebaseTokens.map((token) => {
+        sendNotification({
+          title: "New Message",
+          body: `${username} replied to your story`,
+          token,
+          image: avatar,
+        });
+      })
+    );
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Reply sent successfully"));
 });
 
 const markSelfSeen = asyncHandler(async (req: Request, res: Response) => {
@@ -281,7 +402,7 @@ const unlikeStory = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json(new ApiResponse(200, {}, "Story unliked"));
 });
 
-const deleteExpiredImages = asyncHandler(async (_: Request, res: Response) => { 
+const deleteExpiredImages = asyncHandler(async (_: Request, res: Response) => {
   const result = await cloudinary.search
     .expression(`folder=sociial/stories AND uploaded_at<1d`)
     .max_results(50)
@@ -314,6 +435,7 @@ export {
   markSelfSeen,
   createStory,
   getUserStory,
+  replyStory,
   deleteStory,
   seenStory,
   likeStory,

@@ -8,6 +8,7 @@ import {
   getUserStory,
   likeStory,
   markSelfSeen,
+  replyStory,
   seenStory,
   unlikeStory,
 } from "../controllers/story.controller";
@@ -22,6 +23,8 @@ router.use(verifyJWT);
 router.route("/").get(getStories);
 
 router.route("/user").get(getUserStory);
+
+router.route("/reply").post(replyStory);
 
 router.route("/seen/:storyId").patch(seenStory);
 
