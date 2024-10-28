@@ -4,6 +4,7 @@ import {
   getCall,
   startCall,
   endCall,
+  acceptCall,
 } from "../controllers/call.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -16,6 +17,8 @@ router.get("/", getCalls);
 router.get("/:callId", getCall);
 
 router.post("/start", startCall);
+
+router.patch("/accept/:callId", acceptCall);
 
 router.patch("/end/:callId", endCall);
 

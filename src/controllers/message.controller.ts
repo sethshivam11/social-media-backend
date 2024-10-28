@@ -73,7 +73,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
     content,
     chat: chatId,
     sender: _id,
-    kind: messageKind,
+    kind: kind || messageKind,
     post,
     reply: {
       username: reply ? username : undefined,

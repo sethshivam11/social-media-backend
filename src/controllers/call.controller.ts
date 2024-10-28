@@ -83,7 +83,7 @@ const startCall = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(201, call, "Call started successfully"));
 });
 
-const pingCall = asyncHandler(async (req: Request, res: Response) => {
+const acceptCall = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
@@ -99,13 +99,20 @@ const pingCall = asyncHandler(async (req: Request, res: Response) => {
     _id.toString() !== call.caller.toString() &&
     _id.toString() !== call.callee.toString()
   ) {
-    throw new ApiError(403, "Unauthorized to ping call");
+    throw new ApiError(403, "Unauthorized to accept call");
   }
 
-  call.lastPinged = new Date();
+  call.acceptedAt = new Date();
   await call.save();
 
-  return res.status(200).json(new ApiResponse(200, call, "Call pinged"));
+  emitSocketEvent(
+    call.caller.toString(),
+    ChatEventEnum.CALL_ACCEPTED_EVENT,
+    call
+  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, call, "Call accepted successfully"));
 });
 
 const endCall = asyncHandler(async (req: Request, res: Response) => {
@@ -127,7 +134,7 @@ const endCall = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, "Unauthorized to end call");
   }
 
-  call.duration = Date.now() - new Date(call.createdAt).getTime();
+  call.endedAt = new Date();
   await call.save();
 
   const { caller, callee } = call;
@@ -144,4 +151,4 @@ const endCall = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, call, "Call ended successfully"));
 });
 
-export { getCalls, getCall, startCall, endCall, pingCall };
+export { getCalls, getCall, startCall, acceptCall, endCall };

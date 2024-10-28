@@ -35,16 +35,12 @@ const uploadToCloudinary = async (
       type === "posts" || type === "avatars"
         ? { aspect_ratio: "1:1", crop: "crop" }
         : {};
-    const isStory =
-      type === "stories"
-        ? { expires_at: Date.now() + 1000 * 60 * 60 * 24 }
-        : {};
+
     const response = await cloudinary.uploader.upload(localFilePath, {
       resource_type: "auto",
       folder: `sociial/${type}`,
       upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || "sociial",
       ...isPost,
-      ...isStory,
     });
 
     fs.unlinkSync(localFilePath);
@@ -70,12 +66,19 @@ const deleteFromCloudinary = async (cloudFileLink: string) => {
 
     const urlArray = cloudFileLink.split("/");
     const idx = urlArray.indexOf("sociial");
-    const publicId = urlArray
-      .slice(idx, urlArray.length)
-      .join("/")
-      .split(".")[0];
 
-    const response = await cloudinary.uploader.destroy(publicId);
+    let publicId = urlArray.slice(idx, urlArray.length).join("/").split(".")[0];
+    let resource_type: "raw" | "video" | undefined = undefined;
+    if (cloudFileLink.includes("raw")) {
+      publicId = urlArray.slice(idx, urlArray.length).join("/");
+      resource_type = "raw";
+    } else if (cloudFileLink.includes("video")) {
+      resource_type = "video";
+    }
+
+    const response = await cloudinary.uploader.destroy(publicId, {
+      resource_type,
+    });
 
     if (response?.result === "ok") return true;
   } catch (err) {

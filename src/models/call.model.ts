@@ -5,8 +5,8 @@ interface CallInterface extends Document {
   caller: ObjectId;
   type: "video" | "audio";
   duration: number;
-  lastPinged: Date;
-  createdAt: Date;
+  acceptedAt: Date | null;
+  endedAt: Date | null;
 }
 
 const callSchema: Schema<CallInterface> = new Schema(
@@ -26,13 +26,13 @@ const callSchema: Schema<CallInterface> = new Schema(
       enum: ["video", "audio"],
       required: true,
     },
-    lastPinged: {
+    acceptedAt: {
       type: Date,
-      default: Date.now(),
+      default: null,
     },
-    duration: {
-      type: Number,
-      default: 0,
+    endedAt: {
+      type: Date,
+      default: null,
     },
   },
   {
