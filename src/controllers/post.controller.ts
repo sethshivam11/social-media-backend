@@ -492,6 +492,7 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
       entityId: postId,
       description: `${username} liked your post`,
       user: post.user,
+      link: `/post/${postId}`,
     });
 
     const notificationPreference = await NotificationPreferences.findOne({

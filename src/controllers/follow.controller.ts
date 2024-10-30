@@ -50,6 +50,8 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
       title: `New Follower`,
       description: `${currentUser.username} started following you`,
       user: followeeId,
+      entityId: newFollow._id,
+      link: `/${currentUser.username}`,
     });
 
     const notificationPreference = await NotificationPreferences.findOne({
@@ -88,6 +90,8 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
       title: `New Follower`,
       description: `${currentUser.username} started following you`,
       user: followeeId,
+      entityId: follow._id,
+      link: `/${currentUser.username}`,
     });
 
     const notificationPreference = await NotificationPreferences.findOne({
@@ -152,6 +156,9 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
   await NotificationModel.findOneAndDelete({
     user: unfolloweeDetails._id,
     title: `New Follower`,
+    description: `${req.user?.username} started following you`,
+    entityId: follow._id,
+    link: `/${username}`,
   });
 
   return res

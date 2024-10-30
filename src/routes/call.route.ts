@@ -14,7 +14,7 @@ router.use(verifyJWT);
 
 router.get("/", getCalls);
 
-router.get("/:callId", getCall);
+router.get("/get/:callId", getCall);
 
 router.post("/start", startCall);
 

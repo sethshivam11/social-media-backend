@@ -14,6 +14,6 @@ router.route("/").get(getNotifications);
 
 router.route("/read").get(readNotification);
 
-router.route("/delete/:notificationId").delete(deleteNotification);
+router.route("/:notificationId").delete(deleteNotification);
 
 export default router;

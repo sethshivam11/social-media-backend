@@ -156,9 +156,10 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
     });
     if (participant !== _id) {
       await NotificationModel.create({
-        title: `New Group Chat`,
-        description: `${username} added you to a group`,
+        title: `New Group`,
+        description: `${username} added you to ${groupName || "a Group"}`,
         user: participant,
+        link: `/messages/${groupChat._id}`,
       });
     }
 
@@ -325,9 +326,10 @@ const addParticipants = asyncHandler(async (req: Request, res: Response) => {
   participantsToAdd.forEach(async (participant) => {
     await NotificationModel.create({
       entityId: chat._id,
-      title: `New Group Chat`,
-      description: `${username} added you to a group`,
+      title: `New Group`,
+      description: `${username} added you to ${chat.groupName || "a Group"}`,
       user: participant,
+      link: `/messages/${chat._id}`,
     });
 
     const notificationPreference = await NotificationPreferences.findOne({
@@ -411,8 +413,8 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
   participantsToRemove.forEach(async (participant) => {
     await NotificationModel.create({
       entityId: chat._id,
-      title: `New Group Chat`,
-      description: `${username} removed you from a group`,
+      title: `Removed from ${chat.groupName || "Group"}`,
+      description: `${username} removed you`,
       user: participant,
     });
 
@@ -558,7 +560,7 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
       await NotificationModel.create({
         entityId: chat._id,
         title: "Group Deleted",
-        description: `${username} deleted the group`,
+        description: `${username} deleted ${chat.groupName || "the group"}`,
         user: participant,
       });
     }

@@ -19,11 +19,13 @@ const readNotification = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "Notification not found");
   }
 
-  notifications.forEach(async (notification) => {
-    await NotificationModel.findByIdAndUpdate(notification._id, {
-      read: true,
-    });
-  });
+  await Promise.all(
+    notifications.map(async (notification) => {
+      await NotificationModel.findByIdAndUpdate(notification._id, {
+        read: true,
+      });
+    })
+  );
 
   return res
     .status(200)

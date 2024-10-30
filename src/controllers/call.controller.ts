@@ -32,7 +32,6 @@ const getCall = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
   const { callId } = req.params;
 
   const call = await Call.findById(callId).populate({

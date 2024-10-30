@@ -13,6 +13,7 @@ import sendEmail from "../helpers/mailer";
 import { Follow } from "../models/follow.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import { Post } from "../models/post.model";
+import { NotificationModel } from "../models/notification.model";
 
 export interface File {
   fieldname: string;
@@ -26,7 +27,6 @@ export interface File {
 }
 
 // Helper functions and objects
-
 const options = {
   httpOnly: true,
   secure: true,
@@ -147,6 +147,13 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const token = await generateToken(user._id, device, location);
 
   const userObj = removeSensitiveData(user);
+  await NotificationModel.create({
+    title: "Login attempt",
+    description: `New login from ${device + ", " || ""}${
+      location || "unknown location"
+    }`,
+    user: user._id,
+  });
 
   return res
     .status(200)

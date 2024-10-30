@@ -55,7 +55,7 @@ const createComment = asyncHandler(async (req: Request, res: Response) => {
       description: `${username} commented on your post`,
       user: _id,
       entityId: comment._id,
-      link: `/posts/${postId}`,
+      link: `/post/${postId}`,
       type: "comment",
     });
 
@@ -116,7 +116,7 @@ const deleteComment = asyncHandler(async (req: Request, res: Response) => {
   await NotificationModel.findOneAndDelete({
     user: comment.user,
     entityId: commentId,
-    link: `/posts/${comment.post}`,
+    link: `/post/${comment.post}`,
   });
 
   return res
@@ -154,7 +154,7 @@ const likeComment = asyncHandler(async (req: Request, res: Response) => {
     await NotificationModel.create({
       title: `Comment Liked`,
       entityId: commentId,
-      description: `Your comment was liked by @${username}`,
+      description: `${username} liked your comment`,
       user: comment.user,
       link: `/posts/${comment.post}`,
     });

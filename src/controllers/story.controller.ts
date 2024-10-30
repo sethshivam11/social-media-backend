@@ -330,7 +330,7 @@ const likeStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, avatar } = req.user;
+  const { _id, avatar, username } = req.user;
   const { storyId } = req.params;
 
   const story = await Story.findById(storyId);
@@ -348,9 +348,10 @@ const likeStory = asyncHandler(async (req: Request, res: Response) => {
   if (story.user.toString() === _id.toString()) {
     await NotificationModel.create({
       title: `Story Liked`,
-      description: `${_id} liked your story`,
+      description: `${username} liked your story`,
       user: story.user,
       entityId: story._id,
+      link: `/${username}`,
     });
 
     const notificationPreference = await NotificationPreferences.findOne({
