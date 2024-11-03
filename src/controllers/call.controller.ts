@@ -61,6 +61,10 @@ const startCall = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Invalid request body");
   }
 
+  if (callee === _id.toString()) {
+    throw new ApiError(400, "Cannot call yourself");
+  }
+
   const call = await Call.create({
     caller: _id,
     callee,
@@ -82,12 +86,13 @@ const startCall = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(201, call, "Call started successfully"));
 });
 
-const acceptCall = asyncHandler(async (req: Request, res: Response) => {
+const updateCall = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
   const { _id } = req.user;
   const { callId } = req.params;
+  const { acceptedAt, endedAt } = req.body;
 
   const call = await Call.findById(callId);
   if (!call) {
@@ -101,14 +106,10 @@ const acceptCall = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, "Unauthorized to accept call");
   }
 
-  call.acceptedAt = new Date();
+  if (acceptedAt) call.acceptedAt = acceptedAt;
+  if (endedAt) call.endedAt = endedAt;
   await call.save();
 
-  emitSocketEvent(
-    call.caller.toString(),
-    ChatEventEnum.CALL_ACCEPTED_EVENT,
-    call
-  );
   return res
     .status(200)
     .json(new ApiResponse(200, call, "Call accepted successfully"));
@@ -150,4 +151,4 @@ const endCall = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, call, "Call ended successfully"));
 });
 
-export { getCalls, getCall, startCall, acceptCall, endCall };
+export { getCalls, getCall, startCall, updateCall, endCall };

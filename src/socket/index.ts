@@ -33,51 +33,45 @@ const newGroupChatEvent = (socket: Socket) => {
   });
 };
 const callEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.NEW_CALL_EVENT, ({ chatId, isVideo }) => {
-    socket.in(chatId).emit(ChatEventEnum.NEW_CALL_EVENT, { chatId, isVideo });
-    console.log("New call event chatId: ", chatId);
+  socket.on(ChatEventEnum.NEW_CALL_EVENT, ({ userId, data }) => {
+    socket.in(userId).emit(ChatEventEnum.NEW_CALL_EVENT, { userId, data });
+    console.log("New call event userId: ", userId);
   });
 };
 const callAcceptedEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.CALL_ACCEPTED_EVENT, ({ chatId, ans }) => {
-    socket.in(chatId).emit(ChatEventEnum.CALL_ACCEPTED_EVENT, { chatId, ans });
-    console.log("Call accepted event chatId: ", chatId);
-  });
-};
-const callDisconnectedEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.CALL_DISCONNECTED_EVENT, (chatId) => {
-    socket.in(chatId).emit(ChatEventEnum.CALL_DISCONNECTED_EVENT, chatId);
-    console.log("Call disconnected event chatId: ", chatId);
+  socket.on(ChatEventEnum.CALL_ACCEPTED_EVENT, ({ userId, data }) => {
+    socket.in(userId).emit(ChatEventEnum.CALL_ACCEPTED_EVENT, { userId, data });
+    console.log("Call accepted event userId: ", userId);
   });
 };
 const callAudioEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.CALL_AUDIO_EVENT, ({ chatId, audio }) => {
-    socket.in(chatId).emit(ChatEventEnum.CALL_AUDIO_EVENT, {
-      chatId,
+  socket.on(ChatEventEnum.CALL_AUDIO_EVENT, ({ callId, audio }) => {
+    socket.in(callId).emit(ChatEventEnum.CALL_AUDIO_EVENT, {
+      callId,
       audio,
     });
     console.log(
-      `Call audio turned ${audio ? "on" : "off"} event chatId: `,
-      chatId
+      `Call audio turned ${audio ? "on" : "off"} event callId: `,
+      callId
     );
   });
 };
 const callVideoEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.CALL_VIDEO_EVENT, ({ chatId, video }) => {
-    socket.in(chatId).emit(ChatEventEnum.CALL_VIDEO_EVENT, {
-      chatId,
+  socket.on(ChatEventEnum.CALL_VIDEO_EVENT, ({ callId, video }) => {
+    socket.in(callId).emit(ChatEventEnum.CALL_VIDEO_EVENT, {
+      callId,
       video,
     });
     console.log(
-      `Call video turned ${video ? "on" : "off"} event chatId: `,
-      chatId
+      `Call video turned ${video ? "on" : "off"} event callId: `,
+      callId
     );
   });
 };
 const callCameraSwitchEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.CALL_CAMERA_SWITCH_EVENT, (chatId) => {
-    socket.in(chatId).emit(ChatEventEnum.CALL_CAMERA_SWITCH_EVENT, chatId);
-    console.log("Call camera switched event chatId: ", chatId);
+  socket.on(ChatEventEnum.CALL_CAMERA_SWITCH_EVENT, (callId) => {
+    socket.in(callId).emit(ChatEventEnum.CALL_CAMERA_SWITCH_EVENT, callId);
+    console.log("Call camera switched event callId: ", callId);
   });
 };
 
@@ -118,7 +112,6 @@ const initializeSocket = (io: Server) => {
       newGroupChatEvent(socket);
       callEvent(socket);
       callAcceptedEvent(socket);
-      callDisconnectedEvent(socket);
       callAudioEvent(socket);
       callVideoEvent(socket);
       callCameraSwitchEvent(socket);
