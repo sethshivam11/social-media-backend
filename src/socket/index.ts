@@ -38,6 +38,12 @@ const callEvent = (socket: Socket) => {
     console.log("New call event userId: ", userId);
   });
 };
+const callHandshakeEvent = (socket: Socket) => {
+  socket.on(ChatEventEnum.CALL_HANDSHAKE_EVENT, ({ from, to, data }) => {
+    socket.in(to).emit(ChatEventEnum.CALL_HANDSHAKE_EVENT, { from, to, data });
+    console.log("Call handshake", from, "event to:", to);
+  });
+};
 const callAcceptedEvent = (socket: Socket) => {
   socket.on(ChatEventEnum.CALL_ACCEPTED_EVENT, ({ userId, data }) => {
     socket.in(userId).emit(ChatEventEnum.CALL_ACCEPTED_EVENT, { userId, data });
@@ -111,6 +117,7 @@ const initializeSocket = (io: Server) => {
       stopTypingEvent(socket);
       newGroupChatEvent(socket);
       callEvent(socket);
+      callHandshakeEvent(socket);
       callAcceptedEvent(socket);
       callAudioEvent(socket);
       callVideoEvent(socket);
