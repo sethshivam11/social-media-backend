@@ -22,7 +22,7 @@ const sendMessage = asyncHandler(async (req: Request, res: Response) => {
   if (attachmentLocalFile) {
     const upload = await uploadToCloudinary(
       attachmentLocalFile?.path,
-      "messages"
+      "anonymous-messages"
     );
     attachment = upload?.secure_url;
   }

@@ -426,9 +426,15 @@ const deleteExpiredImages = asyncHandler(async (_: Request, res: Response) => {
     );
   }
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result.resources, "Deleted expired images"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        deleted: result.resources.length,
+      },
+      "Deleted expired images"
+    )
+  );
 });
 
 export {
