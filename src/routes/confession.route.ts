@@ -3,7 +3,7 @@ import {
   deleteMessage,
   getMessages,
   sendMessage,
-} from "../controllers/anonymousMessage.controller";
+} from "../controllers/confession.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
 

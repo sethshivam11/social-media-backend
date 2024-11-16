@@ -10,7 +10,7 @@ export const ChatEventEnum = Object.freeze({
   SOCKET_ERROR_EVENT: "socketError",
   MESSAGE_RECIEVED_EVENT: "messageRecieved",
   MESSAGE_DELETE_EVENT: "messageDeleted",
-  ANONYMOUS_MESSAGE_RECIEVED_EVENT: "anonymousMessageRecieved",
+  CONFESSION_RECIEVED_EVENT: "confessionRecieved",
   GROUP_DELETE_EVENT: "deleteGroup",
   NEW_REACT_EVENT: "someoneReacted",
   NEW_UNREACT_EVENT: "someoneUnreacted",

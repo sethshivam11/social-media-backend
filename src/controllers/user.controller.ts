@@ -26,11 +26,7 @@ export interface File {
   size: number;
 }
 
-// Helper functions and objects
-const options = {
-  httpOnly: true,
-  secure: true,
-};
+// helper functions
 
 const removeSensitiveData = (user: UserInterface) => {
   const newUser = user.toObject();
@@ -157,7 +153,11 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
 
   return res
     .status(200)
-    .cookie("token", token, options)
+    .cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: parseInt(process.env.COOKIE_EXPIRY || "31536000"),
+    })
     .json(
       new ApiResponse(
         200,

@@ -27,7 +27,7 @@ const uploadToCloudinary = async (
     | "posts"
     | "avatars"
     | "reports"
-    | "anonymous-messages"
+    | "confessions"
     | "miscellaneous"
 ) => {
   try {
