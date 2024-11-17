@@ -5,7 +5,6 @@ export interface NotificationInterface extends Document {
   description: string;
   user: ObjectId;
   entityId: string;
-  read: boolean;
   link: string;
 }
 
@@ -27,10 +26,6 @@ const NotificationSchema: Schema<NotificationInterface> = new Schema(
       ref: "user",
     },
     entityId: String,
-    read: {
-      type: Boolean,
-      default: false,
-    },
     link: {
       type: String,
     },

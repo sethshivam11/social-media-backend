@@ -4,34 +4,6 @@ import { ApiError } from "../utils/ApiError";
 import { NotificationModel } from "../models/notification.model";
 import { ApiResponse } from "../utils/ApiResponse";
 
-const readNotification = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user) {
-    throw new ApiError(401, "User not verified");
-  }
-
-  const { _id } = req.user;
-
-  const notifications = await NotificationModel.find({
-    user: _id,
-    read: false,
-  });
-  if (!notifications || notifications.length === 0) {
-    throw new ApiError(404, "Notification not found");
-  }
-
-  await Promise.all(
-    notifications.map(async (notification) => {
-      await NotificationModel.findByIdAndUpdate(notification._id, {
-        read: true,
-      });
-    })
-  );
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Notification marked as read successfully"));
-});
-
 const getNotifications = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
@@ -85,4 +57,19 @@ const deleteNotification = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
-export { readNotification, getNotifications, deleteNotification };
+const deleteAllNotifications = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new ApiError(401, "User not verified");
+    }
+    const { _id } = req.user;
+
+    await NotificationModel.deleteMany({ user: _id });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "All notifications deleted successfully"));
+  }
+);
+
+export { getNotifications, deleteAllNotifications, deleteNotification };

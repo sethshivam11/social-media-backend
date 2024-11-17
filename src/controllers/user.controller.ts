@@ -145,10 +145,11 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const userObj = removeSensitiveData(user);
   await NotificationModel.create({
     title: "Login attempt",
-    description: `New login from ${device + ", " || ""}${
+    description: `New login from ${device ? `${device}, ` : ""}${
       location || "unknown location"
     }`,
     user: user._id,
+    link: "/settings/security/login-activity",
   });
 
   return res

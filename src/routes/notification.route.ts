@@ -1,9 +1,9 @@
 import { Router } from "express";
 import verifyJWT from "../middlewares/auth.middleware";
 import {
+  deleteAllNotifications,
   deleteNotification,
   getNotifications,
-  readNotification,
 } from "../controllers/notification.controller";
 
 const router = Router();
@@ -12,7 +12,7 @@ router.use(verifyJWT);
 
 router.route("/").get(getNotifications);
 
-router.route("/read").get(readNotification);
+router.route("/deleteAll").delete(deleteAllNotifications);
 
 router.route("/:notificationId").delete(deleteNotification);
 

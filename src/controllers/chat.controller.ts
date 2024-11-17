@@ -416,6 +416,7 @@ const removeParticipants = asyncHandler(async (req: Request, res: Response) => {
       title: `Removed from ${chat.groupName || "Group"}`,
       description: `${username} removed you`,
       user: participant,
+      link: "/messages"
     });
 
     const notificationPreference = await NotificationPreferences.findOne({
@@ -562,6 +563,7 @@ const deleteGroup = asyncHandler(async (req: Request, res: Response) => {
         title: "Group Deleted",
         description: `${username} deleted ${chat.groupName || "the group"}`,
         user: participant,
+        link: "/messages"
       });
     }
   });
