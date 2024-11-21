@@ -1,6 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
-import { DEFAULT_GROUP_ICON, DEFAULT_USER_AVATAR } from "../constants";
+import { DEFAULT_GROUP_ICON, DEFAULT_USER_AVATAR } from "./constants";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

@@ -1,9 +1,9 @@
 import { Server, Socket } from "socket.io";
-import { ChatEventEnum } from "../constants";
+import { ChatEventEnum } from "../utils/constants";
 import jwt from "jsonwebtoken";
 import { ApiError } from "../utils/ApiError";
 import { User } from "../models/user.model";
-import { io } from "../../app";
+import { io } from "../app";
 
 let onlineUsers: string[] = [];
 
@@ -39,14 +39,14 @@ const callEvent = (socket: Socket) => {
   });
 };
 const callHandshakeEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.CALL_HANDSHAKE_EVENT, ({ from, to, data }) => {
-    socket.in(to).emit(ChatEventEnum.CALL_HANDSHAKE_EVENT, { from, to, data });
-    console.log("Call handshake", from, "event to:", to);
+  socket.on(ChatEventEnum.CALL_HANDSHAKE_EVENT, ({ userId, offer }) => {
+    socket.in(userId).emit(ChatEventEnum.CALL_HANDSHAKE_EVENT, offer);
+    console.log("Call handshake event to:", userId);
   });
 };
 const callAcceptedEvent = (socket: Socket) => {
-  socket.on(ChatEventEnum.CALL_ACCEPTED_EVENT, ({ userId, data }) => {
-    socket.in(userId).emit(ChatEventEnum.CALL_ACCEPTED_EVENT, { userId, data });
+  socket.on(ChatEventEnum.CALL_ACCEPTED_EVENT, ({ userId, answer }) => {
+    socket.in(userId).emit(ChatEventEnum.CALL_ACCEPTED_EVENT, answer);
     console.log("Call accepted event userId: ", userId);
   });
 };

@@ -6,7 +6,7 @@ import { deleteFromCloudinary, uploadToCloudinary } from "../utils/cloudinary";
 import { Confession } from "../models/confession.model";
 import { ApiResponse } from "../utils/ApiResponse";
 import { emitSocketEvent } from "../socket";
-import { ChatEventEnum } from "../constants";
+import { ChatEventEnum } from "../utils/constants";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import sendNotification from "../helpers/firebase";
 import { NotificationModel } from "../models/notification.model";

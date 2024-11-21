@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, ObjectId } from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { DEFAULT_USER_AVATAR } from "../constants";
+import { DEFAULT_USER_AVATAR } from "../utils/constants";
 
 export interface UserInterface extends Document {
   avatar: string;

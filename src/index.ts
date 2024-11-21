@@ -1,4 +1,4 @@
-import connectDB from "./src/db";
+import connectDB from "./db";
 import httpServer from "./app";
 
 const port = process.env.PORT || 5000;

@@ -4,7 +4,7 @@ import { ApiError } from "../utils/ApiError";
 import { Call } from "../models/call.model";
 import { ApiResponse } from "../utils/ApiResponse";
 import { emitSocketEvent } from "../socket";
-import { ChatEventEnum } from "../constants";
+import { ChatEventEnum } from "../utils/constants";
 
 const getCalls = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {

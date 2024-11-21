@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, ObjectId } from "mongoose";
 import { User } from "./user.model";
-import { DEFAULT_GROUP_ICON } from "../constants";
+import { DEFAULT_GROUP_ICON } from "../utils/constants";
 
 interface ChatInterface extends Document {
   users: ObjectId[];

@@ -10,7 +10,7 @@ import {
 } from "../utils/cloudinary";
 import { ApiResponse } from "../utils/ApiResponse";
 import { emitSocketEvent } from "../socket";
-import { ChatEventEnum } from "../constants";
+import { ChatEventEnum } from "../utils/constants";
 import mongoose from "mongoose";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
 import sendNotification from "../helpers/firebase";

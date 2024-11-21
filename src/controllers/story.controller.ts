@@ -17,7 +17,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { Chat } from "../models/chat.model";
 import { Message } from "../models/message.model";
 import { emitSocketEvent } from "../socket";
-import { ChatEventEnum } from "../constants";
+import { ChatEventEnum } from "../utils/constants";
 
 const createStory = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {

@@ -9,7 +9,7 @@ import {
   deleteFromCloudinary,
   uploadToCloudinary,
 } from "../utils/cloudinary";
-import { ChatEventEnum, DEFAULT_GROUP_ICON } from "../constants";
+import { ChatEventEnum, DEFAULT_GROUP_ICON } from "../utils/constants";
 import { emitSocketEvent } from "../socket";
 import { NotificationModel } from "../models/notification.model";
 import sendNotification from "../helpers/firebase";

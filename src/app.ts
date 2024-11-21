@@ -1,10 +1,10 @@
 import express, { Request, Response } from "express";
 import cookieParser from "cookie-parser";
-import errorHandler from "./src/middlewares/error.middleware";
-import { UserInterface } from "./src/models/user.model";
+import errorHandler from "./middlewares/error.middleware";
+import { UserInterface } from "./models/user.model";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { initializeSocket } from "./src/socket";
+import { initializeSocket } from "./socket";
 import cors from "cors";
 
 declare module "express" {
@@ -42,18 +42,18 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 // Route imports
-import userRouter from "./src/routes/user.route";
-import callRouter from "./src/routes/call.route";
-import followRouter from "./src/routes/follow.route";
-import postRouter from "./src/routes/post.route";
-import commmentRouter from "./src/routes/comment.route";
-import chatRouter from "./src/routes/chat.route";
-import messageRouter from "./src/routes/message.route";
-import storyRouter from "./src/routes/story.route";
-import reportRouter from "./src/routes/report.route";
-import notificationRouter from "./src/routes/notification.route";
-import notificationPreferenceRouter from "./src/routes/notificationpreference.route";
-import confessionRouter from "./src/routes/confession.route";
+import userRouter from "./routes/user.route";
+import callRouter from "./routes/call.route";
+import followRouter from "./routes/follow.route";
+import postRouter from "./routes/post.route";
+import commmentRouter from "./routes/comment.route";
+import chatRouter from "./routes/chat.route";
+import messageRouter from "./routes/message.route";
+import storyRouter from "./routes/story.route";
+import reportRouter from "./routes/report.route";
+import notificationRouter from "./routes/notification.route";
+import notificationPreferenceRouter from "./routes/notificationpreference.route";
+import confessionRouter from "./routes/confession.route";
 
 // Routes declarations
 app.use("/api/v1/users", userRouter);

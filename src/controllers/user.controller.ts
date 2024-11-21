@@ -8,7 +8,7 @@ import {
   deleteFromCloudinary,
   uploadToCloudinary,
 } from "../utils/cloudinary";
-import { DEFAULT_USER_AVATAR } from "../constants";
+import { DEFAULT_USER_AVATAR } from "../utils/constants";
 import sendEmail from "../helpers/mailer";
 import { Follow } from "../models/follow.model";
 import { NotificationPreferences } from "../models/notificationpreferences.model";
