@@ -6,6 +6,10 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { initializeSocket } from "./socket";
 import cors from "cors";
+import passport from "passport";
+import MongoStore from "connect-mongo";
+import session from "express-session";
+import "./passport/index";
 
 declare module "express" {
   interface Request {
@@ -69,7 +73,7 @@ app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/notificationPreferences", notificationPreferenceRouter);
 app.use("/api/v1/confessions", confessionRouter);
 
-app.get("/", (_: Request, res: Response) => {
+app.get("/", (_: Request, res: Response): => {
   return res.json({
     success: true,
     status: 200,
@@ -77,6 +81,26 @@ app.get("/", (_: Request, res: Response) => {
     message: "App is running",
   });
 });
+
+// passport initialization
+const store = MongoStore.create({
+  mongoUrl: process.env.MONGODB_URI as string,
+  collectionName: "sociial",
+});
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "secret",
+    resave: false,
+    saveUninitialized: false,
+    store,
+    cookie: {
+      maxAge: parseInt(process.env.COOKIE_EXPIRY || "31536000000"),
+    },
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 initializeSocket(io);
 
