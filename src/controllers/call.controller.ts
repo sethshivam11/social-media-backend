@@ -139,7 +139,7 @@ const endCall = asyncHandler(async (req: Request, res: Response) => {
 
   const { caller, callee } = call;
   emitSocketEvent(
-    caller.toString() === _id.toString()
+    caller.toString() !== _id.toString()
       ? caller.toString()
       : callee.toString(),
     ChatEventEnum.CALL_DISCONNECTED_EVENT,
