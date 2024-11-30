@@ -1,27 +1,26 @@
-import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
-import passport, { DoneCallback } from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import passport from "passport";
 import { User } from "../models/user.model";
 import { ApiError } from "../utils/ApiError";
 
 try {
   passport.serializeUser((user, next) => {
-    next(null, user._id);
+    next(null, user.id);
   });
 
   passport.deserializeUser(async (id, next) => {
     try {
       const user = await User.findById(id);
       if (user) next(null, user);
-      else
-        next(
-          {
-            status: 404,
-            message: "User not found",
-          },
-          null
-        );
+      else next(new ApiError(404, "User not found"), null);
     } catch (error) {
-      next(error, null);
+      next(
+        new ApiError(
+          500,
+          "Something went wrong while deserializing the user. Error: " + error
+        ),
+        null
+      );
     }
   });
 
@@ -32,13 +31,16 @@ try {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
         callbackURL: process.env.GOOGLE_CALLBACK_URL as string,
       },
-      async (_: string, __: string, profile: Profile, next: DoneCallback) => {
+      async (_, __, profile, next) => {
         const email = profile.emails ? profile.emails[0]?.value : null;
         const fullName = profile.displayName;
         if (!email || !fullName) {
-          return next(new ApiError(404, "Email or name does not exists"), null);
+          return next(
+            new ApiError(404, "Email or username is required"),
+            false
+          );
         }
-        const user = await User.findOne({ fullName });
+        const user = await User.findOne({ email });
         if (user) {
           next(null, user);
         } else {
@@ -46,16 +48,11 @@ try {
             email,
             fullName,
             username: email.replace("@gmail.com", ""),
+            password: email,
           });
           if (createdUser) next(null, createdUser);
           else
-            next(
-              {
-                status: 400,
-                message: "User not created",
-              },
-              null
-            );
+            next(new ApiError(500, "Error while registering the user"), false);
         }
       }
     )

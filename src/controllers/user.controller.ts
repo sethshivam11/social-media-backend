@@ -171,6 +171,36 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     );
 });
 
+const handleSocialLogin = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError(401, "User not verified");
+  }
+  const { _id } = req.user;
+
+  const user = await User.findById(_id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const token = await generateToken(user._id);
+  await NotificationModel.create({
+    title: "Login attempt",
+    description: `New login from unknown location`,
+    user: user._id,
+    link: "/settings/security/login-activity",
+  });
+
+  return res
+    .status(200)
+    .cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: parseInt(process.env.COOKIE_EXPIRY || "31536000"),
+      sameSite: "lax",
+    })
+    .redirect(`${process.env.CLIENT_SSO_REDIRECT_URL || "/"}?token=${token}`);
+});
+
 const getProfile = asyncHandler(async (req: Request, res: Response) => {
   const { username, userId } = req.query;
 
@@ -934,6 +964,7 @@ const clearCookies = asyncHandler(async (req: Request, res: Response) => {
 export {
   registerUser,
   loginUser,
+  handleSocialLogin,
   getCurrentUser,
   verifyEmail,
   logoutUser,
