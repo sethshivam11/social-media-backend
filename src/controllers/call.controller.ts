@@ -12,7 +12,9 @@ const getCalls = asyncHandler(async (req: Request, res: Response) => {
   }
   const { _id } = req.user;
 
-  const calls = await Call.find({ users: _id }).populate({
+  const calls = await Call.find({
+    $or: [{ caller: _id }, { callee: _id }],
+  }).populate({
     model: "user",
     path: "caller callee",
     select: "avatar username fullName",

@@ -640,7 +640,6 @@ const isUsernameAvailable = asyncHandler(
     if (!username) {
       throw new ApiError(400, "Username is required");
     }
-
     if (username.length >= 30) {
       throw new ApiError(400, "Username must be less than 30 letters");
     }
@@ -655,6 +654,36 @@ const isUsernameAvailable = asyncHandler(
     }
     if (username.startsWith(".")) {
       throw new ApiError(400, "Username cannot start with a .");
+    }
+    const reservedPages = [
+      "settings",
+      "add-story",
+      "notifications",
+      "search",
+      "call",
+      "confessions",
+      "messages",
+      "get-premium",
+      "logs",
+      "messages",
+      "new-post",
+      "terms",
+      "privacy",
+      "about",
+      "contact",
+      "post",
+      "sign-in",
+      "sign-up",
+      "stories",
+      "story",
+      "upload-video",
+      "verify-code",
+      "video",
+      "videos",
+      "home",
+    ];
+    if (reservedPages.includes(username)) {
+      throw new ApiError(400, "Username is reserved, try another one!");
     }
 
     const user = await User.findOne({ username });

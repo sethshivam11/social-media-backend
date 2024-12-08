@@ -49,6 +49,7 @@ try {
             fullName,
             username: email.replace("@gmail.com", ""),
             password: email,
+            isMailVerified: true,
           });
           if (createdUser) next(null, createdUser);
           else
