@@ -42,7 +42,12 @@ try {
         }
         const user = await User.findOne({ email });
         if (user) {
-          next(null, user);
+          if (user.loginType !== "google") {
+            throw new ApiError(
+              400,
+              "Please login using your username & password"
+            );
+          } else next(null, user);
         } else {
           const createdUser = await User.create({
             email,
@@ -50,6 +55,7 @@ try {
             username: email.replace("@gmail.com", ""),
             password: email,
             isMailVerified: true,
+            loginType: "google",
           });
           if (createdUser) next(null, createdUser);
           else

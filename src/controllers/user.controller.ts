@@ -135,6 +135,10 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
+  if (user.loginType === "google") {
+    throw new ApiError(400, "Please login using Google.");
+  }
+
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid passsword");
@@ -382,9 +386,13 @@ const updatePassword = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, loginType } = req.user;
+  if (loginType === "google") {
+    throw new ApiError(401, "Google login user cannot update password");
+  }
 
   const { oldPassword, newPassword } = req.body;
+
   if (!(oldPassword || newPassword)) {
     throw new ApiError(400, "Both passwords are required");
   }
@@ -476,7 +484,11 @@ const updateEmail = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
 
-  const { _id } = req.user;
+  const { _id, loginType } = req.user;
+  if (loginType === "google") {
+    throw new ApiError(401, "Google login user cannot update email");
+  }
+
   const { email, code } = req.body;
 
   if (!email) {

@@ -17,6 +17,7 @@ export interface UserInterface extends Document {
   isMailVerified: boolean;
   verifyCode: string;
   verifyCodeExpiry: Date;
+  loginType: "local" | "google";
   sessions: {
     _id?: ObjectId;
     token: string;
@@ -77,6 +78,11 @@ const userSchema: Schema<UserInterface> = new Schema(
     isMailVerified: {
       type: Boolean,
       default: false,
+    },
+    loginType: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
     verifyCode: String,
     verifyCodeExpiry: Date,
