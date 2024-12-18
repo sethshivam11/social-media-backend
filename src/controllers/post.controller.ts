@@ -202,22 +202,9 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
-  // first post with user's details
-  const firstPost = await Post.findOne({ user: user._id }).populate({
-    path: "user",
-    model: "user",
-    select: "username fullName avatar followingCount followersCount postsCount",
-    strictPopulate: false,
-  });
-
-  if (!firstPost) {
-    throw new ApiError(404, "No posts found");
-  }
-
-  // rest posts without user's details
-  const restPosts = await Post.find({ user: userId }).sort({ createdAt: -1 });
-
-  const posts = [firstPost, ...(restPosts || [])];
+  const posts = await Post.find({
+    user: user._id,
+  }).sort({ createdAt: -1 });
 
   return res
     .status(200)
@@ -319,50 +306,24 @@ const videoFeed = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
   const { blocked } = req.user;
-  const { page } = req.query;
-
-  if (page) {
-    pageNo = parseInt(page as string);
-    if (pageNo <= 0) {
-      pageNo = 1;
-    }
-  } else {
-    pageNo = 1;
-  }
-
-  const totalCount = await Post.countDocuments({
-    user: { $nin: [...blocked] },
-    kind: "video",
-  });
 
   const posts = await Post.find({
     user: { $nin: [...blocked] },
     kind: "video",
-  })
-    .populate({
-      model: "user",
-      path: "user",
-      select: "username fullName avatar",
-      strictPopulate: false,
-    })
-    .limit(limit)
-    .skip((pageNo - 1) * limit);
+  }).populate({
+    model: "user",
+    path: "user",
+    select: "username fullName avatar",
+    strictPopulate: false,
+  });
 
   if (!posts || posts.length === 0) {
     throw new ApiError(404, "No posts found");
   }
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        posts,
-        pageNo,
-        max: totalCount,
-      },
-      "Posts retrieved successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, posts, "Posts retrieved successfully"));
 });
 
 const getVideoPost = asyncHandler(async (req: Request, res: Response) => {
