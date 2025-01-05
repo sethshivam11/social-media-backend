@@ -186,6 +186,13 @@ const deletePost = asyncHandler(async (req: Request, res: Response) => {
   await Comment.deleteMany({ post: postId });
   await post.deleteOne();
 
+  await User.updateOne(
+    { _id },
+    {
+      $inc: { postsCount: -1 },
+    }
+  );
+
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Post deleted successfully"));
@@ -204,7 +211,14 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
 
   const posts = await Post.find({
     user: user._id,
-  }).sort({ createdAt: -1 });
+  })
+    .populate({
+      model: "user",
+      path: "user",
+      select: "avatar fullName username",
+      strictPopulate: false,
+    })
+    .sort({ createdAt: -1 });
 
   return res
     .status(200)
