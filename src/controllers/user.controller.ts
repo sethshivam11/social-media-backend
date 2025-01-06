@@ -30,8 +30,11 @@ export interface File {
 
 const removeSensitiveData = (user: UserInterface) => {
   const newUser = user.toObject();
+  
   delete newUser.password;
   delete newUser.sessions;
+  delete newUser.verifyCode;
+  delete newUser.verifyCodeExpiry;
 
   return newUser;
 };
@@ -240,9 +243,9 @@ const getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "User not verified");
   }
 
-  const { sessions, ...safeUser } = req.user.toObject();
+  const user = removeSensitiveData(req.user);
 
-  return res.status(200).json(new ApiResponse(200, safeUser, "User found"));
+  return res.status(200).json(new ApiResponse(200, user, "User found"));
 });
 
 const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
