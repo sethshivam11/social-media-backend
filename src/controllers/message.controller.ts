@@ -391,7 +391,6 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
     })
     .populate("sender reacts", "username fullName avatar")
     .sort({ createdAt: 1 });
-  // .populate("post", "media kind thumbnail caption user")
 
   if (messages.length === 0 || !messages) {
     throw new ApiError(404, "No messages found");
