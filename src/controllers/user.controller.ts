@@ -30,7 +30,7 @@ export interface File {
 
 const removeSensitiveData = (user: UserInterface) => {
   const newUser = user.toObject();
-  
+
   delete newUser.password;
   delete newUser.sessions;
   delete newUser.verifyCode;
@@ -1005,6 +1005,27 @@ const clearCookies = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, {}, "Cookies cleared"));
 });
 
+const removeInvalidUsers = asyncHandler(async (req: Request, res: Response) => {
+  const sevenDaysAgo = new Date(new Date().setDate(new Date().getDate() - 7));
+  const users = await User.find({
+    isMailVerified: false,
+    createdAt: { $lt: sevenDaysAgo },
+  });
+
+  if (!users || !users.length) {
+    throw new ApiError(400, "No invalid users to delete");
+  }
+
+  const userIds = users.map((user) => user._id);
+  await User.deleteMany({ _id: { $in: userIds } });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, {}, `${users.length} invalid users were deleted`)
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -1033,4 +1054,5 @@ export {
   removeSession,
   clearCookies,
   removeAllSessions,
+  removeInvalidUsers,
 };

@@ -27,6 +27,7 @@ import {
   removeSession,
   clearCookies,
   removeAllSessions,
+  removeInvalidUsers,
 } from "../controllers/user.controller";
 import verifyJWT from "../middlewares/auth.middleware";
 
@@ -49,6 +50,8 @@ router.route("/forgotPassword").post(forgotPassword);
 router.route("/getProfile").get(getProfile);
 
 router.route("/clearCookies").get(clearCookies);
+
+router.route("/removeInvalidUsers").get(removeInvalidUsers);
 
 // Verified routes
 
