@@ -771,31 +771,20 @@ const getFollowSuggestions = asyncHandler(
     const limit = parseInt(max as string) || 5;
 
     const follow = await Follow.findOne({ user: _id });
-    if (!follow) {
-      const users = await User.find(
-        { _id: { $ne: _id, $nin: blocked }, isMailVerified: true },
-        "username fullName avatar"
-      ).limit(limit);
-
-      if (!users || !users.length) {
-        throw new ApiError(404, "No users found");
-      }
-
-      return res
-        .status(200)
-        .json(new ApiResponse(200, users, "Suggestions found"));
-    }
-
-    const users = await User.find(
-      {
-        _id: {
-          $nin: [...follow.followings, ...blocked],
-          $ne: _id,
-        },
-        isMailVerified: true,
+    const query = {
+      _id: {
+        $nin: follow ? [...follow.followings, ...blocked] : blocked,
+        $ne: _id,
       },
-      "username fullName avatar"
-    ).limit(limit);
+      isMailVerified: true,
+    };
+
+    const users = await User.aggregate([
+      { $match: query },
+      { $sample: { size: limit } },
+      { $project: { username: 1, fullName: 1, avatar: 1 } },
+    ]);
+
     if (!users || !users.length) {
       throw new ApiError(404, "No users found");
     }
