@@ -63,7 +63,7 @@ app.use(
     store,
     cookie: {
       maxAge: parseInt(process.env.COOKIE_EXPIRY || "31536000000"),
-      sameSite: "none",
+      sameSite: "lax",
     },
   })
 );

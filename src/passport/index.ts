@@ -35,18 +35,16 @@ try {
         const email = profile.emails ? profile.emails[0]?.value : null;
         const fullName = profile.displayName;
         if (!email || !fullName) {
-          return next(
-            new ApiError(404, "Email or username is required"),
-            false
-          );
+          return next(null, false, {
+            message: "Email or username is required",
+          });
         }
         const user = await User.findOne({ email });
         if (user) {
           if (user.loginType !== "google") {
-            throw new ApiError(
-              400,
-              "Please login using your username & password"
-            );
+            next(null, false, {
+              message: "Please login using your username & password",
+            });
           } else next(null, user);
         } else {
           const createdUser = await User.create({
@@ -59,7 +57,7 @@ try {
           });
           if (createdUser) next(null, createdUser);
           else
-            next(new ApiError(500, "Error while registering the user"), false);
+            next(null, false, { message: "Error while registering the user" });
         }
       }
     )
