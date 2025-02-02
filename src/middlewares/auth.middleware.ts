@@ -27,6 +27,10 @@ const verifyJWT = async (req: Request, _: Response, next: NextFunction) => {
       throw new ApiError(400, "User not found");
     }
 
+    if (!user.isMailVerified) {
+      throw new ApiError(401, `Mail not verified for: ${user.username}`);
+    }
+
     const isLoggedIn = user.sessions.some((session) => session.token === token);
     if (!isLoggedIn) {
       throw new ApiError(401, "Invalid token!");
