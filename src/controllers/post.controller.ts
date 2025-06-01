@@ -324,12 +324,14 @@ const videoFeed = asyncHandler(async (req: Request, res: Response) => {
   const posts = await Post.find({
     user: { $nin: [...blocked] },
     kind: "video",
-  }).populate({
-    model: "user",
-    path: "user",
-    select: "username fullName avatar",
-    strictPopulate: false,
-  });
+  })
+    .populate({
+      model: "user",
+      path: "user",
+      select: "username fullName avatar",
+      strictPopulate: false,
+    })
+    .sort("-createdAt");
 
   if (!posts || posts.length === 0) {
     throw new ApiError(404, "No posts found");
