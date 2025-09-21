@@ -42,8 +42,18 @@ const postSchema: Schema<PostInterface> = new Schema(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+postSchema.virtual("likesPreview", {
+  ref: "user",
+  localField: "likes",
+  foreignField: "_id",
+  justOne: false,
+  options: { limit: 3, select: "avatar fullName" }, // only 3 + selected fields
+});
 
 postSchema.methods.updatePostCount = async function () {
   await User.findByIdAndUpdate(

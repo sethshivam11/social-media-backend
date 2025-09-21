@@ -218,6 +218,7 @@ const getUserPosts = asyncHandler(async (req: Request, res: Response) => {
       select: "avatar fullName username",
       strictPopulate: false,
     })
+    .populate("likesPreview")
     .sort({ createdAt: -1 });
 
   return res
@@ -231,12 +232,15 @@ const getPost = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Post id is required");
   }
 
-  const post = await Post.findById(postId).populate({
-    model: "user",
-    path: "user",
-    select: "username avatar fullName followersCount followingCount postsCount",
-    strictPopulate: false,
-  });
+  const post = await Post.findById(postId)
+    .populate({
+      model: "user",
+      path: "user",
+      select:
+        "username avatar fullName followersCount followingCount postsCount",
+      strictPopulate: false,
+    })
+    .populate("likesPreview");
 
   if (!post) {
     throw new ApiError(404, "Post not found");
@@ -249,15 +253,16 @@ const getPost = asyncHandler(async (req: Request, res: Response) => {
     .limit(6)
     .sort("-createdAt");
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { post, relatedPosts },
-        "Post retrieved successfully"
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        post,
+        relatedPosts,
+      },
+      "Post retrieved successfully"
+    )
+  );
 });
 
 const createFeed = asyncHandler(async (req: Request, res: Response) => {
@@ -294,6 +299,7 @@ const createFeed = asyncHandler(async (req: Request, res: Response) => {
       select: "username avatar fullName",
       strictPopulate: false,
     })
+    .populate("likesPreview")
     .sort("-createdAt")
     .limit(limit)
     .skip((pageNo - 1) * limit);
@@ -331,6 +337,7 @@ const videoFeed = asyncHandler(async (req: Request, res: Response) => {
       select: "username fullName avatar",
       strictPopulate: false,
     })
+    .populate("likesPreview")
     .sort("-createdAt");
 
   if (!posts || posts.length === 0) {
@@ -348,12 +355,15 @@ const getVideoPost = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Post id is required");
   }
 
-  const post = await Post.findById(postId).populate({
-    model: "user",
-    path: "user",
-    select: "username fullName avatar",
-    strictPopulate: false,
-  });
+  const post = await Post.findById(postId)
+    .populate({
+      model: "user",
+      path: "user",
+      select: "username fullName avatar",
+      strictPopulate: false,
+    })
+    .populate("likesPreview");
+
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
@@ -404,6 +414,7 @@ const explorePosts = asyncHandler(async (req: Request, res: Response) => {
         select: "username fullName avatar",
         strictPopulate: false,
       })
+      .populate("likesPreview")
       .sort("-createdAt")
       .limit(limit)
       .skip((pageNo - 1) * limit);
@@ -424,6 +435,7 @@ const explorePosts = asyncHandler(async (req: Request, res: Response) => {
         select: "username fullName avatar",
         strictPopulate: false,
       })
+      .populate("likesPreview")
       .sort("-createdAt")
       .limit(limit)
       .skip((pageNo - 1) * limit);
