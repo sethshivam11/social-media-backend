@@ -18,7 +18,7 @@ const follow = asyncHandler(async (req: Request, res: Response) => {
   if (!userId && !username) {
     throw new ApiError(400, "Followee is required");
   }
-  if (username === currentUser.username || userId === currentUser._id) {
+  if (username === currentUser.username || userId === currentUser._id.toString()) {
     throw new ApiError(400, "You can't follow yourself");
   }
 
@@ -129,7 +129,7 @@ const unfollow = asyncHandler(async (req: Request, res: Response) => {
   if (!userId && !username) {
     throw new ApiError(400, "Unfollowee is required");
   }
-  if (userId === _id || username === req.user.username) {
+  if (userId === _id.toString() || username === req.user.username) {
     throw new ApiError(400, "You can't unfollow yourself");
   }
 

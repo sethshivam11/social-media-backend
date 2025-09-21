@@ -154,7 +154,7 @@ const createGroupChat = asyncHandler(async (req: Request, res: Response) => {
         fullName,
       },
     });
-    if (participant !== _id) {
+    if (participant !== _id.toString()) {
       await NotificationModel.create({
         title: `New Group`,
         description: `${username} added you to ${groupName || "a Group"}`,

@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, ObjectId } from "mongoose";
 import { User } from "./user.model";
 
 interface PostInterface extends Document {
+  _id: ObjectId;
   user: ObjectId;
   caption: string;
   media: string[];

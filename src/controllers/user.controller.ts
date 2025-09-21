@@ -147,7 +147,7 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(401, "Invalid passsword");
   }
 
-  const token = await generateToken(user._id, device, location);
+  const token = await generateToken(user._id.toString(), device, location);
 
   const userObj = removeSensitiveData(user);
   await NotificationModel.create({
@@ -189,7 +189,7 @@ const handleSocialLogin = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
-  const token = await generateToken(user._id);
+  const token = await generateToken(user._id.toString());
   await NotificationModel.create({
     title: "Login attempt",
     description: `New login from unknown location`,

@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { DEFAULT_USER_AVATAR } from "../utils/constants";
 
 export interface UserInterface extends Document {
+  _id: ObjectId;
   avatar: string;
   fullName: string;
   username: string;
