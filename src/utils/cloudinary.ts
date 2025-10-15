@@ -43,13 +43,16 @@ const uploadToCloudinary = async (
       upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || "sociial",
       ...isPost,
     });
-
-    fs.unlinkSync(localFilePath);
+    if(fs.existsSync(localFilePath)) {
+        fs.unlinkSync(localFilePath);
+    }
 
     return response;
   } catch (err) {
     console.log("Error occured while uploading to cloudinary\n", err);
-    fs.unlinkSync(localFilePath);
+    if(fs.existsSync(localFilePath)) {
+        fs.unlinkSync(localFilePath);
+    }
   }
 };
 
