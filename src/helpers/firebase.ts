@@ -40,9 +40,10 @@ const sendNotification = async ({
     ) {
       console.log("Invalid or expired token. Removing token:", token);
 
-      await NotificationPreferences.findOneAndUpdate({
-        $pull: { firebaseTokens: token },
-      });
+      await NotificationPreferences.findOneAndUpdate(
+        { firebaseTokens: token },
+        { $pull: { firebaseTokens: token } }
+      );
     }
   }
 };
