@@ -457,7 +457,7 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id, avatar, username } = req.user;
+  const { _id, avatar, username, fullName } = req.user;
 
   const { postId } = req.params;
   if (!postId) {
@@ -472,7 +472,7 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
   if (!post.likes.includes(_id)) {
     post.likes = [...post.likes, _id];
     post.likesCount += 1;
-    post.save();
+    await post.save();
   }
 
   if (post.user.toString() !== _id.toString()) {
@@ -504,16 +504,25 @@ const likePost = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Post liked successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        _id,
+        avatar,
+        username,
+        fullName,
+      },
+      "Post liked successfully"
+    )
+  );
 });
 
 const dislikePost = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
-  const { _id } = req.user;
+  const { _id, avatar, fullName, username } = req.user;
 
   const { postId } = req.params;
   if (!postId) {
@@ -538,9 +547,18 @@ const dislikePost = asyncHandler(async (req: Request, res: Response) => {
     entityId: postId,
   });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Post disliked successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        _id,
+        avatar,
+        username,
+        fullName,
+      },
+      "Post disliked successfully"
+    )
+  );
 });
 
 const getLikes = asyncHandler(async (req: Request, res: Response) => {
