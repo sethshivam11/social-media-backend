@@ -53,7 +53,7 @@ postSchema.virtual("likesPreview", {
   localField: "likes",
   foreignField: "_id",
   justOne: false,
-  options: { limit: 3, select: "avatar fullName" }, // only 3 + selected fields
+  options: { limit: 3, select: "avatar fullName username" }, // only 3 selected fields
 });
 
 postSchema.methods.updatePostCount = async function () {
