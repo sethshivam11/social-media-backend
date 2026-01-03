@@ -13,6 +13,7 @@ interface ReportInterface extends Document {
     | "story"
     | "confession";
   entityId: string;
+  createdAt: Date;
   images?: string[];
 }
 
@@ -22,6 +23,7 @@ const reportSchema: Schema<ReportInterface> = new Schema({
   title: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },
   kind: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now() },
   images: [String],
 });
 
