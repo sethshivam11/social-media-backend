@@ -13,7 +13,7 @@ import "./passport/index";
 
 declare global {
   namespace Express {
-    interface User extends UserInterface {}
+    interface User extends UserInterface { }
     interface Request {
       user?: User;
     }
@@ -84,6 +84,7 @@ import notificationRouter from "./routes/notification.route";
 import notificationPreferenceRouter from "./routes/notificationpreference.route";
 import confessionRouter from "./routes/confession.route";
 import passportRouter from "./routes/passport.route";
+import adminRouter from "./routes/admin.route";
 
 // Routes declarations
 app.use("/", passportRouter);
@@ -99,6 +100,7 @@ app.use("/api/v1/report", reportRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/notificationPreferences", notificationPreferenceRouter);
 app.use("/api/v1/confessions", confessionRouter);
+app.use("/api/v1/admin", adminRouter);
 
 app.get("/", (_, res) => {
   res.json({
@@ -120,8 +122,7 @@ function reloadWebsite() {
   fetch((process.env.PUBLIC_URL as string) || "https://sociial.onrender.com")
     .then((response) => {
       console.log(
-        `Reloaded at ${new Date().toLocaleString("en-IN")}: Status Code ${
-          response.status
+        `Reloaded at ${new Date().toLocaleString("en-IN")}: Status Code ${response.status
         }`
       );
     })
