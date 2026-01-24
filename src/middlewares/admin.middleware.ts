@@ -13,7 +13,7 @@ const verifyAdmin = async (req: Request, _: Response, next: NextFunction) => {
 
     const decodedToken = (await jwt.verify(
       token,
-      process.env.TOKEN_SECRET as string
+      process.env.TOKEN_SECRET as string,
     )) as JwtPayload;
 
     if (!decodedToken?.username) {
