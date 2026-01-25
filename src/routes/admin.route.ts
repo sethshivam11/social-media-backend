@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  analytics,
   contentDistribution,
   dashboardStats,
   deleteReport,
@@ -10,7 +11,6 @@ import {
   removeUnverifiedUsers,
   reports,
   users,
-  usersActivity,
 } from "../controllers/admin.controller";
 import verifyAdmin from "../middlewares/admin.middleware";
 
@@ -20,21 +20,21 @@ router.post("/login", login);
 
 router.get("/logout", logout);
 
-router.use(verifyAdmin);
+router.get("/users", users);
 
 router.get("/dashboard", dashboardStats);
 
 router.get("/growth", growth);
 
-router.get("/users", users);
-
 router.get("/reports", reports);
 
 router.get("/entity", getEntity);
 
-router.get("/users-activity", usersActivity);
-
 router.get("/content-distribution", contentDistribution);
+
+router.get("/analytics", analytics);
+
+router.use(verifyAdmin);
 
 router.delete("/reports/:reportId", deleteReport);
 

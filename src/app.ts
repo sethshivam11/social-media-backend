@@ -13,7 +13,7 @@ import "./passport/index";
 
 declare global {
   namespace Express {
-    interface User extends UserInterface { }
+    interface User extends UserInterface {}
     interface Request {
       user?: User;
     }
@@ -37,7 +37,7 @@ export const io = new Server(httpServer, {
 });
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN,
+  origin: process.env.CORS_ORIGIN?.split(","),
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
   allowedHeaders: "*",
   credentials: true,
@@ -65,7 +65,7 @@ app.use(
       maxAge: parseInt(process.env.COOKIE_EXPIRY || "31536000000"),
       sameSite: "lax",
     },
-  })
+  }),
 );
 app.use(passport.initialize());
 app.use(passport.session());
@@ -122,14 +122,15 @@ function reloadWebsite() {
   fetch((process.env.PUBLIC_URL as string) || "https://sociial.onrender.com")
     .then((response) => {
       console.log(
-        `Reloaded at ${new Date().toLocaleString("en-IN")}: Status Code ${response.status
-        }`
+        `Reloaded at ${new Date().toLocaleString("en-IN")}: Status Code ${
+          response.status
+        }`,
       );
     })
     .catch((error) => {
       console.error(
         `Error reloading at ${new Date().toLocaleString("en-IN")}:`,
-        error.message
+        error.message,
       );
     });
 }
@@ -137,6 +138,6 @@ function reloadWebsite() {
 if (process.env.NODE_ENV === "production") {
   setInterval(
     reloadWebsite,
-    parseInt(process.env.RELOAD_INTERVAL as string) || 1000 * 60 * 5
+    parseInt(process.env.RELOAD_INTERVAL as string) || 1000 * 60 * 5,
   );
 }
