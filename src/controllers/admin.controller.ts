@@ -13,6 +13,7 @@ import { Chat } from "../models/chat.model";
 import { Call } from "../models/call.model";
 import { DEFAULT_USER_AVATAR } from "../utils/constants";
 import { deleteFromCloudinary } from "../utils/cloudinary";
+import { Message } from "../models/message.model";
 
 const login = asyncHandler(async (req: Request, res: Response) => {
   const { username, password } = req.body;
@@ -48,37 +49,187 @@ const login = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const dashboardStats = asyncHandler(async (req: Request, res: Response) => {
-  const users = await User.countDocuments({ isMailVerified: true });
   const posts = await Post.countDocuments();
   const videos = await Post.countDocuments({ kind: "video" });
   const comments = await Comment.countDocuments();
-  const reports = await ReportModel.countDocuments();
-  const notVerifiedUsers = await User.countDocuments({
-    isMailVerified: false,
-  });
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const activeUsers = await User.countDocuments({
-    sessions: {
-      $elemMatch: {
-        createdAt: { $gte: thirtyDaysAgo },
+  const likes = await Post.aggregate([
+    {
+      $project: {
+        likesCount: { $size: "$likes" },
       },
     },
-  });
+    {
+      $group: {
+        _id: null,
+        count: { $sum: "$likesCount" },
+      },
+    },
+  ]);
+  const likesTrend = await Post.aggregate([
+    {
+      $group: {
+        _id: {
+          month: {
+            $dateTrunc: {
+              date: "$createdAt",
+              unit: "month",
+            },
+          },
+          likes: "$likes",
+        },
+      },
+    },
+    {
+      $project: {
+        likesCount: { $size: "$_id.likes" },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          likes: "$_id.likesCount",
+          month: "$_id.month",
+        },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { "_id.month": -1 } },
+    { $limit: 2 },
+  ]);
+  const likesThisMonth = likesTrend[0]?.count || 0;
+  const likesLastMonth = likesTrend[1]?.count || 0;
+  const likesChange =
+    likesLastMonth === 0
+      ? 100
+      : ((likesThisMonth - likesLastMonth) / likesLastMonth) * 100;
+
+  const commentTrend = await Comment.aggregate([
+    {
+      $group: {
+        _id: {
+          $dateTrunc: {
+            date: "$createdAt",
+            unit: "month",
+          },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { _id: -1 },
+    },
+    {
+      $limit: 2,
+    },
+  ]);
+  const commentsThisMonth = commentTrend[0]?.count || 0;
+  const commentsLastMonth = commentTrend[1]?.count || 0;
+  const commentChange =
+    commentsLastMonth === 0
+      ? 100
+      : ((commentsThisMonth - commentsLastMonth) / commentsLastMonth) * 100;
 
   return res.status(200).json(
     new ApiResponse(
       200,
       {
-        users,
-        posts,
-        videos,
-        comments,
-        reports,
-        activeUsers,
-        notVerifiedUsers,
+        posts: {
+          total: posts,
+          videos,
+        },
+        likes: {
+          total: likes[0]?.count || 0,
+          change: likesChange,
+        },
+        comments: {
+          total: comments,
+          change: commentChange,
+        },
       },
       "Dashboard data fetched successfully",
+    ),
+  );
+});
+
+const userStats = asyncHandler(async (req: Request, res: Response) => {
+  const users = await User.countDocuments();
+  const unverifiedUsers = await User.countDocuments({
+    isMailVerified: false,
+  });
+
+  const connectedUsers = await User.countDocuments({
+    $or: [{ followersCount: { $gte: 1 } }, { followingCount: { $gte: 1 } }],
+  });
+  const connectedUsersTrend = await User.aggregate([
+    {
+      $match: {
+        $or: [{ followersCount: { $gte: 1 } }, { followersCount: { $gte: 1 } }],
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateTrunc: {
+            date: "$createdAt",
+            unit: "month",
+          },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: -1 } },
+    { $limit: 2 },
+  ]);
+  const connectedThisMonth = connectedUsersTrend[0]?.count || 0;
+  const connectedLastMonth = connectedUsersTrend[1]?.count || 0;
+  const connectedChange =
+    connectedLastMonth === 0
+      ? 100
+      : ((connectedThisMonth - connectedLastMonth) / connectedLastMonth) * 100;
+
+  const activeUsers = await User.aggregate([
+    { $unwind: "$sessions" },
+    {
+      $group: {
+        _id: {
+          month: {
+            $dateTrunc: {
+              date: "$sessions.createdAt",
+              unit: "month",
+            },
+          },
+          user: "$_id",
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$_id.month",
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: -1 } },
+    { $limit: 2 },
+  ]);
+  const usersThisMonth = activeUsers[0]?.count || 0;
+  const usersLastMonth = activeUsers[1]?.count || 0;
+  const userChange =
+    usersLastMonth === 0
+      ? 100
+      : ((usersThisMonth - usersLastMonth) / usersLastMonth) * 100;
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        total: users,
+        verified: users - unverifiedUsers,
+        unverified: unverifiedUsers,
+        active: { current: usersThisMonth, change: userChange },
+        connected: { total: connectedUsers, change: connectedChange },
+      },
+      "User Stats found successfully",
     ),
   );
 });
@@ -275,11 +426,19 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
 const deleteReport = asyncHandler(async (req: Request, res: Response) => {
   const { reportId } = req.params;
 
-  const report = await ReportModel.findByIdAndDelete(reportId);
+  const report = await ReportModel.findById(reportId);
 
   if (!report) {
     throw new ApiError(404, "Report not found");
   }
+
+  if (report.images && report.images.length > 0) {
+    await Promise.all(
+      report.images.map((image) => deleteFromCloudinary(image)),
+    );
+  }
+
+  await report.deleteOne();
 
   return res
     .status(200)
@@ -413,6 +572,43 @@ const analytics = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
+const messageAnalytics = asyncHandler(async (req: Request, res: Response) => {
+  const trend = await Message.aggregate([
+    {
+      $group: {
+        _id: {
+          $dateTrunc: {
+            date: "$createdAt",
+            unit: "month",
+          },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { _id: -1 },
+    },
+  ]);
+  const type = await Message.aggregate([
+    {
+      $group: {
+        _id: "$kind",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { trend, type },
+        "Message Analytics found successfully",
+      ),
+    );
+});
+
 const removeUnverifiedUsers = asyncHandler(
   async (req: Request, res: Response) => {
     const users = await User.find({ isMailVerified: false });
@@ -450,6 +646,7 @@ const logout = asyncHandler(async (req: Request, res: Response) => {
 export {
   login,
   dashboardStats,
+  userStats,
   growth,
   reports,
   users,
@@ -457,6 +654,7 @@ export {
   getEntity,
   contentDistribution,
   analytics,
+  messageAnalytics,
   removeUnverifiedUsers,
   logout,
 };
