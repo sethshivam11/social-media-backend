@@ -39,7 +39,7 @@ export const io = new Server(httpServer, {
 const corsOptions = {
   origin: process.env.CORS_ORIGIN?.split(","),
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-  allowedHeaders: "*",
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 };
 

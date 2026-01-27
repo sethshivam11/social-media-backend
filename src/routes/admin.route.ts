@@ -8,9 +8,11 @@ import {
   growth,
   login,
   logout,
+  messageAnalytics,
   removeUnverifiedUsers,
   reports,
   users,
+  userStats,
 } from "../controllers/admin.controller";
 import verifyAdmin from "../middlewares/admin.middleware";
 
@@ -24,6 +26,8 @@ router.get("/users", users);
 
 router.get("/dashboard", dashboardStats);
 
+router.get("/user-stats", userStats);
+
 router.get("/growth", growth);
 
 router.get("/reports", reports);
@@ -33,6 +37,8 @@ router.get("/entity", getEntity);
 router.get("/content-distribution", contentDistribution);
 
 router.get("/analytics", analytics);
+
+router.get("/message-analytics", messageAnalytics);
 
 router.use(verifyAdmin);
 
