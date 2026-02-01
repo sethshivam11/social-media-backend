@@ -5,6 +5,7 @@ import {
   dashboardStats,
   deleteReport,
   getEntity,
+  getMessages,
   growth,
   login,
   logout,
@@ -33,6 +34,8 @@ router.get("/growth", growth);
 router.get("/reports", reports);
 
 router.get("/entity", getEntity);
+
+router.get("/messages/:id", getMessages);
 
 router.get("/content-distribution", contentDistribution);
 
