@@ -42,7 +42,6 @@ const login = asyncHandler(async (req: Request, res: Response) => {
     .cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     })
     .json(new ApiResponse(200, { token }, "Login successful"));
@@ -337,7 +336,7 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
       const post = await Post.findById(entityId).populate({
         model: "user",
         path: "user",
-        select: "username email avatar",
+        select: "username email avatar fullName",
         strictPopulate: false,
       });
       if (!post) {
@@ -351,7 +350,7 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
       const comment = await Comment.findById(entityId).populate({
         model: "user",
         path: "user",
-        select: "username email avatar",
+        select: "username email avatar fullName",
         strictPopulate: false,
       });
       if (!comment) {
@@ -364,7 +363,7 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
     case "user": {
       const user = await User.findById(
         entityId,
-        "username email avatar createdAt isMailVerified loginType",
+        "username fullName email avatar createdAt isMailVerified loginType followersCount followingCount postsCount",
       );
       if (!user) {
         throw new ApiError(404, "User not found");
@@ -377,7 +376,7 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
       const story = await Story.findById(entityId).populate({
         model: "user",
         path: "user",
-        select: "username email avatar",
+        select: "username email avatar fullName",
         strictPopulate: false,
       });
       if (!story) {
@@ -391,7 +390,7 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
       const chat = await Chat.findById(entityId).populate({
         model: "user",
         path: "users",
-        select: "username email avatar",
+        select: "username email avatar fullName",
         strictPopulate: false,
       });
       if (!chat) {
@@ -405,7 +404,7 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
       const confession = await Post.findById(entityId).populate({
         model: "user",
         path: "user",
-        select: "username email avatar",
+        select: "username email avatar fullName",
         strictPopulate: false,
       });
       if (!confession) {
@@ -421,6 +420,29 @@ const getEntity = asyncHandler(async (req: Request, res: Response) => {
       throw new ApiError(400, "Invalid kind provided");
     }
   }
+});
+
+const getMessages = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  if (!id) {
+    throw new ApiError(400, "Chat id is required");
+  }
+
+  const messages = await Message.find({ chat: id }).populate({
+    path: "sender",
+    select: "username fullName avatar",
+    model: "user",
+    strictPopulate: false,
+  });
+
+  if (!messages) {
+    throw new ApiError(404, "No messages found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, messages, "Messages found successfully"));
 });
 
 const deleteReport = asyncHandler(async (req: Request, res: Response) => {
@@ -652,6 +674,7 @@ export {
   users,
   deleteReport,
   getEntity,
+  getMessages,
   contentDistribution,
   analytics,
   messageAnalytics,
