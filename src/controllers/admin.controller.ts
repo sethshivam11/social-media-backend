@@ -320,6 +320,120 @@ const reports = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, reports, "Reports fetched successfully"));
 });
 
+const reportsOverview = asyncHandler(async (req: Request, res: Response) => {
+  const statusDistribution = await ReportModel.aggregate([
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { _id: 1 },
+    },
+  ]);
+
+  const pending = statusDistribution[0]?.count || 0;
+  const rejected = statusDistribution[2]?.count || 0;
+  const resolved = statusDistribution[1]?.count || 0;
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        distribution: {
+          pending,
+          resolved,
+          rejected,
+        },
+      },
+      "Reports overview found",
+    ),
+  );
+});
+
+const reportAnalytics = asyncHandler(async (req: Request, res: Response) => {
+  let { period } = req.query;
+
+  if (period === "yearly") {
+    period = "year";
+  } else if (period === "monthly") {
+    period = "month";
+  } else {
+    period = "week";
+  }
+
+  const reportsTrend = await ReportModel.aggregate([
+    {
+      $group: {
+        _id: {
+          $dateTrunc: {
+            date: "$createdAt",
+            unit: period,
+          },
+        },
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { _id: -1 },
+    },
+    {
+      $limit: 30,
+    },
+  ]);
+
+  const reportsDistribution = await ReportModel.aggregate([
+    {
+      $group: {
+        _id: "$kind",
+        count: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { _id: -1 },
+    },
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        trend: reportsTrend,
+        distribution: reportsDistribution,
+      },
+      "Reports Analytics found successfully",
+    ),
+  );
+});
+
+const updateReport = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!id) {
+    throw new ApiError(400, "Report id is required");
+  }
+
+  const options = ["pending", "resolved", "rejected"];
+  if (!status || !options.includes(status)) {
+    throw new ApiError(400, "Invalid status");
+  }
+
+  const report = await ReportModel.findById(id);
+  if (!report) {
+    throw new ApiError(404, "Report not found");
+  }
+
+  report.status = status;
+
+  await report.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, report, "Report status updated successfully"));
+});
+
 const getEntity = asyncHandler(async (req: Request, res: Response) => {
   const { entityId, kind } = req.query;
 
@@ -671,10 +785,13 @@ export {
   userStats,
   growth,
   reports,
+  reportsOverview,
   users,
   deleteReport,
   getEntity,
   getMessages,
+  updateReport,
+  reportAnalytics,
   contentDistribution,
   analytics,
   messageAnalytics,
