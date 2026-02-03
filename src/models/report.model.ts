@@ -12,6 +12,7 @@ interface ReportInterface extends Document {
     | "problem"
     | "story"
     | "confession";
+  status: "pending" | "resolved" | "rejected";
   entityId: string;
   createdAt: Date;
   images?: string[];
@@ -24,10 +25,15 @@ const reportSchema: Schema<ReportInterface> = new Schema({
   description: { type: String, required: true, trim: true },
   kind: { type: String, required: true },
   createdAt: { type: Date, default: Date.now() },
+  status: {
+    type: String,
+    enum: ["pending", "resolved", "rejected"],
+    default: "pending",
+  },
   images: [String],
 });
 
 export const ReportModel = mongoose.model<ReportInterface>(
   "report",
-  reportSchema
+  reportSchema,
 );

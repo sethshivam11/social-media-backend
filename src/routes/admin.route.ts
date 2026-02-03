@@ -11,7 +11,10 @@ import {
   logout,
   messageAnalytics,
   removeUnverifiedUsers,
+  reportAnalytics,
   reports,
+  reportsOverview,
+  updateReport,
   users,
   userStats,
 } from "../controllers/admin.controller";
@@ -41,9 +44,15 @@ router.get("/content-distribution", contentDistribution);
 
 router.get("/analytics", analytics);
 
+router.get("/report-analytics", reportAnalytics);
+
+router.get("/reports-overview", reportsOverview);
+
 router.get("/message-analytics", messageAnalytics);
 
 router.use(verifyAdmin);
+
+router.put("/reports/:id", updateReport);
 
 router.delete("/reports/:reportId", deleteReport);
 
