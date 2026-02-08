@@ -42,7 +42,7 @@ const removeSensitiveData = (user: UserInterface) => {
 const generateToken = async (
   userId: string,
   device?: string,
-  location?: string
+  location?: string,
 ) => {
   try {
     const user = await User.findById(userId);
@@ -116,7 +116,14 @@ const registerUser = asyncHandler(async (req: Request, res: Response) => {
 
   const newUser = removeSensitiveData(user);
 
-  await sendEmail(email, verifyCode, username);
+  const mailSent = await sendEmail(email, verifyCode, username);
+
+  if (!mailSent) {
+    throw new ApiError(
+      500,
+      "Something went wrong while sending verification email, Please try again later",
+    );
+  }
 
   return res
     .status(201)
@@ -173,8 +180,8 @@ const loginUser = asyncHandler(async (req: Request, res: Response) => {
           user: userObj,
           token,
         },
-        "User logged in successfully"
-      )
+        "User logged in successfully",
+      ),
     );
 });
 
@@ -304,12 +311,19 @@ const resendEmail = asyncHandler(async (req: Request, res: Response) => {
 
   await user.save({ validateBeforeSave: false });
 
-  await sendEmail(
+  const mailSent = await sendEmail(
     email || user.email,
     verifyCode,
     username,
-    email ? true : false
+    email ? true : false,
   );
+
+  if (!mailSent) {
+    throw new ApiError(
+      500,
+      "Something went wrong while sending verification email, Please try again later",
+    );
+  }
 
   return res.status(200).json(new ApiResponse(200, {}, "Email sent"));
 });
@@ -371,7 +385,7 @@ const logoutUser = asyncHandler(async (req: Request, res: Response) => {
     if (notificationPreference) {
       await notificationPreference.updateOne(
         { $pull: { firebaseTokens: firebaseToken } },
-        { new: true }
+        { new: true },
       );
     }
   }
@@ -435,7 +449,7 @@ const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
   if (!avatar) {
     throw new ApiError(
       400,
-      "Something went wrong, while uploading to cloudinary"
+      "Something went wrong, while uploading to cloudinary",
     );
   }
 
@@ -445,7 +459,7 @@ const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findByIdAndUpdate(
     _id,
     { $set: { avatar: avatar.secure_url } },
-    { new: true }
+    { new: true },
   );
   if (!user) {
     throw new ApiError(400, "Something went wrong, while updating avatar");
@@ -454,7 +468,7 @@ const updateAvatar = asyncHandler(async (req: Request, res: Response) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, { avatar: avatar.secure_url }, "Avatar updated")
+      new ApiResponse(200, { avatar: avatar.secure_url }, "Avatar updated"),
     );
 });
 
@@ -478,7 +492,7 @@ const removeAvatar = asyncHandler(async (req: Request, res: Response) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, { avatar: DEFAULT_USER_AVATAR }, "Avatar removed")
+      new ApiResponse(200, { avatar: DEFAULT_USER_AVATAR }, "Avatar removed"),
     );
 });
 
@@ -585,13 +599,13 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
   if (userFollow) {
     if (userFollow.followers.includes(blockUser._id)) {
       userFollow.followers = userFollow.followers.filter(
-        (follower) => follower !== blockUser._id
+        (follower) => follower !== blockUser._id,
       );
       currentUser.followersCount -= 1;
     }
     if (userFollow.followings.includes(blockUser._id)) {
       userFollow.followings = userFollow.followings.filter(
-        (following) => following !== blockUser._id
+        (following) => following !== blockUser._id,
       );
       currentUser.followingCount -= 1;
     }
@@ -602,13 +616,13 @@ const blockUser = asyncHandler(async (req: Request, res: Response) => {
   if (blockUserFollow) {
     if (blockUserFollow.followers.includes(blockUser._id)) {
       blockUserFollow.followers = blockUserFollow.followers.filter(
-        (follower) => follower !== blockUser._id
+        (follower) => follower !== blockUser._id,
       );
       blockUser.followersCount -= 1;
     }
     if (blockUserFollow.followings.includes(blockUser._id)) {
       blockUserFollow.followings = blockUserFollow.followings.filter(
-        (following) => following !== blockUser._id
+        (following) => following !== blockUser._id,
       );
       blockUser.followingCount -= 1;
     }
@@ -641,7 +655,7 @@ const unblockUser = asyncHandler(async (req: Request, res: Response) => {
   }
 
   currentUser.blocked = currentUser.blocked.filter(
-    (ele) => ele.toString() !== unblockUser._id.toString()
+    (ele) => ele.toString() !== unblockUser._id.toString(),
   );
   await currentUser.save({ validateBeforeSave: false });
 
@@ -707,7 +721,7 @@ const isUsernameAvailable = asyncHandler(
     }
 
     return res.status(200).json(new ApiResponse(200, {}, "Username available"));
-  }
+  },
 );
 
 const searchUsers = asyncHandler(async (req: Request, res: Response) => {
@@ -729,7 +743,7 @@ const searchUsers = asyncHandler(async (req: Request, res: Response) => {
       _id: { $nin: blocked },
       isMailVerified: true,
     },
-    "username fullName avatar"
+    "username fullName avatar",
   );
   if (!users || !users.length) {
     throw new ApiError(404, "No users found");
@@ -792,7 +806,7 @@ const getFollowSuggestions = asyncHandler(
     return res
       .status(200)
       .json(new ApiResponse(200, users, "Suggestions found"));
-  }
+  },
 );
 
 const savePost = asyncHandler(async (req: Request, res: Response) => {
@@ -827,8 +841,8 @@ const savePost = asyncHandler(async (req: Request, res: Response) => {
       new ApiResponse(
         200,
         [...user.savedPosts, post._id],
-        "Post saved successfully"
-      )
+        "Post saved successfully",
+      ),
     );
 });
 
@@ -863,10 +877,10 @@ const unsavePost = asyncHandler(async (req: Request, res: Response) => {
     new ApiResponse(
       200,
       user.savedPosts.filter(
-        (savedPost) => savedPost.toString() !== post._id.toString()
+        (savedPost) => savedPost.toString() !== post._id.toString(),
       ),
-      "Post unsaved successfully"
-    )
+      "Post unsaved successfully",
+    ),
   );
 });
 
@@ -902,8 +916,8 @@ const getSavedPosts = asyncHandler(async (req: Request, res: Response) => {
       new ApiResponse(
         200,
         populatedUser.savedPosts,
-        "Saved posts retrieved successfully"
-      )
+        "Saved posts retrieved successfully",
+      ),
     );
 });
 
@@ -955,7 +969,7 @@ const removeSession = asyncHandler(async (req: Request, res: Response) => {
   }
 
   user.sessions = user.sessions.filter(
-    (session) => session?._id?.toString() !== sessionId
+    (session) => session?._id?.toString() !== sessionId,
   );
   await user.save({ validateBeforeSave: false });
 
@@ -983,7 +997,7 @@ const removeAllSessions = asyncHandler(async (req: Request, res: Response) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, user.sessions, "All sessions deleted successfully")
+      new ApiResponse(200, user.sessions, "All sessions deleted successfully"),
     );
 });
 
@@ -1011,7 +1025,7 @@ const removeInvalidUsers = asyncHandler(async (req: Request, res: Response) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, {}, `${users.length} invalid users were deleted`)
+      new ApiResponse(200, {}, `${users.length} invalid users were deleted`),
     );
 });
 
