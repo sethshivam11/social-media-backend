@@ -1,41 +1,35 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { Email } from "./email";
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASSWORD,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async function (
   email: string,
   code: number,
   username: string,
-  isRandom?: boolean
+  isRandom?: boolean,
 ) {
-  try {
-    const updatedHtml = Email(
-      code,
-      username,
-      process.env.PUBLIC_URL || "https://sociial.vercel.app",
-      isRandom
-    );
+  const updatedHtml = Email(
+    code,
+    username,
+    process.env.PUBLIC_URL || "https://sociial.vercel.app",
+    isRandom,
+  );
 
-    await transporter.sendMail({
-      from: process.env.MAIL_USER,
-      to: email,
-      subject: "Verify mail - Activate your account",
-      text: `Click the link to verify your account https://sociial.onrender.com/verify?code=${code}&username=${username} at sociial.\nThis code is valid for 5 minutes.\nIf you did not request for this code, please ignore this mail.`,
-      html: updatedHtml,
-    });
-  } catch (error) {
+  const { error } = await resend.emails.send({
+    from: "no-reply@sociial.dev-shivam.in",
+    to: email,
+    subject: "Verify mail - Activate your account",
+    text: `Click the link to verify your account https://sociial.onrender.com/verify?code=${code}&username=${username} at sociial.\nThis code is valid for 5 minutes.\nIf you did not request for this code, please ignore this mail.`,
+    html: updatedHtml,
+  });
+
+  if (error) {
     console.log(error);
+    return false;
   }
+
+  return true;
 };
 
 export default sendEmail;
