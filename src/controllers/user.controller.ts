@@ -664,7 +664,8 @@ const unblockUser = asyncHandler(async (req: Request, res: Response) => {
 
 const isUsernameAvailable = asyncHandler(
   async (req: Request, res: Response) => {
-    const { username } = req.params;
+    const params = req.params;
+    const username = params?.username?.trim()?.toLowerCase() || "";
 
     if (!username) {
       throw new ApiError(400, "Username is required");
@@ -672,17 +673,23 @@ const isUsernameAvailable = asyncHandler(
     if (username.length >= 30) {
       throw new ApiError(400, "Username must be less than 30 letters");
     }
-    if (username.trim() && !/^[a-z_1-9.]+$/.test(username)) {
-      throw new ApiError(400, "Username must contain only lowercase, ., _");
+    if (!/^[a-z_0-9.]+$/.test(username)) {
+      throw new ApiError(
+        400,
+        "Username must contain only letters,  numbers, . and _",
+      );
     }
-    if (/^\d/.test(username)) {
-      throw new ApiError(400, "Username cannot start with a number");
+    if (/^[0-9.]/.test(username)) {
+      throw new ApiError(400, "Username cannot start with a number or dot");
     }
     if (!/[a-z]/.test(username)) {
       throw new ApiError(400, "Username must contain at least one letter");
     }
-    if (username.startsWith(".")) {
-      throw new ApiError(400, "Username cannot start with a .");
+    if (username.includes("..")) {
+      throw new ApiError(400, "Username cannot have more one dot in a row");
+    }
+    if (username.endsWith(".")) {
+      throw new ApiError(400, "Username cannot end with a dot");
     }
     const reservedPages = [
       "settings",

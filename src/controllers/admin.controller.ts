@@ -544,12 +544,25 @@ const getMessages = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(400, "Chat id is required");
   }
 
-  const messages = await Message.find({ chat: id }).populate({
-    path: "sender",
-    select: "username fullName avatar",
-    model: "user",
-    strictPopulate: false,
-  });
+  const messages = await Message.find({ chat: id })
+    .populate({
+      path: "sender",
+      select: "username fullName avatar",
+      model: "user",
+      strictPopulate: false,
+    })
+    .populate({
+      path: "post",
+      select: "media kind thumbnail caption user",
+      model: "post",
+      populate: {
+        path: "user",
+        model: "user",
+        select: "username fullName avatar",
+        strictPopulate: false,
+      },
+      strictPopulate: false,
+    });
 
   if (!messages) {
     throw new ApiError(404, "No messages found");
