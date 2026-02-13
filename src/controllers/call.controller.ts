@@ -88,13 +88,13 @@ const startCall = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(201, call, "Call started successfully"));
 });
 
-const updateCall = asyncHandler(async (req: Request, res: Response) => {
+const acceptCall = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "User not verified");
   }
   const { _id } = req.user;
   const { callId } = req.params;
-  const { acceptedAt, endedAt } = req.body;
+  const { acceptedAt } = req.body;
 
   const call = await Call.findById(callId);
   if (!call) {
@@ -108,8 +108,9 @@ const updateCall = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(403, "Unauthorized to accept call");
   }
 
-  if (acceptedAt) call.acceptedAt = acceptedAt;
-  if (endedAt) call.endedAt = endedAt;
+  if (acceptedAt) call.acceptedAt = new Date(acceptedAt);
+  else call.acceptedAt = new Date();
+
   await call.save();
 
   return res
@@ -145,7 +146,7 @@ const endCall = asyncHandler(async (req: Request, res: Response) => {
       ? caller.toString()
       : callee.toString(),
     ChatEventEnum.CALL_DISCONNECTED_EVENT,
-    call
+    call,
   );
 
   return res
@@ -153,4 +154,4 @@ const endCall = asyncHandler(async (req: Request, res: Response) => {
     .json(new ApiResponse(200, call, "Call ended successfully"));
 });
 
-export { getCalls, getCall, startCall, updateCall, endCall };
+export { getCalls, getCall, startCall, acceptCall, endCall };
