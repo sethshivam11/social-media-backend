@@ -309,16 +309,33 @@ const growth = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const reports = asyncHandler(async (req: Request, res: Response) => {
-  const reports = await ReportModel.find().populate({
-    path: "user",
-    select: "username email avatar fullName",
-    model: "user",
-    strictPopulate: false,
-  });
+  const limit = Number(req.query?.limit || "") || 10;
+  const page = Number(req.query?.page || "") || 1;
+  const skip = (page - 1) * limit;
+
+  const [maxReports, reports] = await Promise.all([
+    ReportModel.countDocuments(),
+    ReportModel.find()
+      .populate({
+        path: "user",
+        select: "username email avatar fullName",
+        model: "user",
+        strictPopulate: false,
+      })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
 
   return res
     .status(200)
-    .json(new ApiResponse(200, reports, "Reports fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { reports, page, limit, max: maxReports },
+        "Reports fetched successfully",
+      ),
+    );
 });
 
 const reportsOverview = asyncHandler(async (req: Request, res: Response) => {
@@ -596,19 +613,35 @@ const deleteReport = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const users = asyncHandler(async (req: Request, res: Response) => {
-  const savedUsers = await User.find(
-    {},
-    "username email avatar sessions._id isMailVerified createdAt loginType",
-  );
+  const limit = Number(req.query?.limit || "") || 10;
+  const page = Number(req.query?.page || "") || 1;
+  const skip = (page - 1) * limit;
 
-  const safeUsers = savedUsers.map((user) => ({
-    ...user.toObject(),
+  const [maxUsers, users] = await Promise.all([
+    User.countDocuments(),
+    User.find(
+      {},
+      "username email avatar sessions._id isMailVerified createdAt loginType",
+    )
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+  ]);
+
+  const safeUsers = users.map((user) => ({
+    ...user,
     sessions: user?.sessions?.length || 0,
   }));
 
   return res
     .status(200)
-    .json(new ApiResponse(200, safeUsers, "Users fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { users: safeUsers, page, limit, max: maxUsers },
+        "Users fetched successfully",
+      ),
+    );
 });
 
 const contentDistribution = asyncHandler(
