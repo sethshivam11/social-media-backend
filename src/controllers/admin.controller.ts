@@ -309,13 +309,26 @@ const growth = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const reports = asyncHandler(async (req: Request, res: Response) => {
+  const status = req.query?.status;
+
+  if (
+    status &&
+    status !== "pending" &&
+    status !== "resolved" &&
+    status !== "rejected"
+  ) {
+    throw new ApiError(400, "Invalid status");
+  }
+
+  const filter = status ? { status } : {};
+
   const limit = Number(req.query?.limit || "") || 10;
   const page = Number(req.query?.page || "") || 1;
   const skip = (page - 1) * limit;
 
   const [maxReports, reports] = await Promise.all([
-    ReportModel.countDocuments(),
-    ReportModel.find()
+    ReportModel.countDocuments(filter),
+    ReportModel.find(filter)
       .populate({
         path: "user",
         select: "username email avatar fullName",
@@ -327,15 +340,19 @@ const reports = asyncHandler(async (req: Request, res: Response) => {
       .lean(),
   ]);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { reports, page, limit, max: maxReports },
-        "Reports fetched successfully",
-      ),
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        reports,
+        page,
+        limit,
+        max: maxReports,
+        maxPages: Math.ceil(maxReports / limit),
+      },
+      "Reports fetched successfully",
+    ),
+  );
 });
 
 const reportsOverview = asyncHandler(async (req: Request, res: Response) => {
@@ -613,14 +630,26 @@ const deleteReport = asyncHandler(async (req: Request, res: Response) => {
 });
 
 const users = asyncHandler(async (req: Request, res: Response) => {
+  let search = req.query?.search;
+  if (typeof search !== "string") search = "";
+
   const limit = Number(req.query?.limit || "") || 10;
   const page = Number(req.query?.page || "") || 1;
   const skip = (page - 1) * limit;
 
+  const filter = search
+    ? {
+        $or: [
+          { username: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }
+    : {};
+
   const [maxUsers, users] = await Promise.all([
-    User.countDocuments(),
+    User.countDocuments(filter),
     User.find(
-      {},
+      filter,
       "username email avatar sessions._id isMailVerified createdAt loginType",
     )
       .skip(skip)
@@ -633,13 +662,38 @@ const users = asyncHandler(async (req: Request, res: Response) => {
     sessions: user?.sessions?.length || 0,
   }));
 
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        users: safeUsers,
+        page,
+        limit,
+        max: maxUsers,
+        maxPages: Math.ceil(maxUsers / limit),
+      },
+      "Users fetched successfully",
+    ),
+  );
+});
+
+const loginDistribution = asyncHandler(async (req: Request, res: Response) => {
+  const distribution = User.aggregate([
+    {
+      $group: {
+        _id: "loginType",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { users: safeUsers, page, limit, max: maxUsers },
-        "Users fetched successfully",
+        distribution,
+        "Login Distribution found successfully",
       ),
     );
 });
@@ -843,5 +897,6 @@ export {
   analytics,
   messageAnalytics,
   removeUnverifiedUsers,
+  loginDistribution,
   logout,
 };

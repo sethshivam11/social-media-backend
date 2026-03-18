@@ -8,6 +8,7 @@ import {
   getMessages,
   growth,
   login,
+  loginDistribution,
   logout,
   messageAnalytics,
   removeUnverifiedUsers,
@@ -27,6 +28,8 @@ router.post("/login", login);
 router.get("/logout", logout);
 
 router.get("/users", users);
+
+router.get("/login-distribution", loginDistribution);
 
 router.get("/dashboard", dashboardStats);
 
