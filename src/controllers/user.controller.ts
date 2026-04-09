@@ -290,17 +290,18 @@ const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 
 const resendEmail = asyncHandler(async (req: Request, res: Response) => {
   const { username, email } = req.query;
-  if (!username || typeof username !== "string") {
-    throw new ApiError(400, "Username is required");
+
+  if(!username && !email) {
+    throw new ApiError(400, "Username or Email is required");
   }
 
-  if (email && typeof email !== "string") {
-    throw new ApiError(400, "Invalid email");
-  }
-
-  const user = await User.findOne({ username });
+  const user = await User.findOne({ $or: [{ username }, { email }] });
   if (!user) {
     throw new ApiError(404, "Please check username or sign up again");
+  }
+
+  if(user.loginType === "google") {
+    throw new ApiError(400, "Please continue using google");
   }
 
   const verifyCode = Math.floor(100000 + Math.random() * 900000);
@@ -312,9 +313,9 @@ const resendEmail = asyncHandler(async (req: Request, res: Response) => {
   await user.save({ validateBeforeSave: false });
 
   const mailSent = await sendEmail(
-    email || user.email,
+    user.email,
     verifyCode,
-    username,
+    user.username,
     email ? true : false,
   );
 
