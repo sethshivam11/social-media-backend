@@ -18,14 +18,14 @@
   <p align="center">
     This is the backend for Sociial, a social media app built with Node.js, Express.js, Socket.IO, and MongoDB. The backend handles user authentication, real-time messaging (chats, group chats, reacts), media management (posts, videos, comments, likes), audio/video calls (WebRTC) and much more.
     <br />
-    <a href="https://github.com/sethshivam11/social-media-backend"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/shivam-iyk/social-media-backend"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     <a href="https://sociial.vercel.app/home">View Demo</a>
     &middot;
-    <a href="https://github.com/sethshivam11/social-media-backend/issues/new?labels=bug">Report Bug</a>
+    <a href="https://github.com/shivam-iyk/social-media-backend/issues/new?labels=bug">Report Bug</a>
     &middot;
-    <a href="https://github.com/sethshivam11/social-media-backend/issues/new?labels=enhancement">Request Feature</a>
+    <a href="https://github.com/shivam-iyk/social-media-backend/issues/new?labels=enhancement">Request Feature</a>
   </p>
 </div>
 
@@ -73,7 +73,7 @@
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/sethshivam11/social-media-backend.git
+   git clone https://github.com/shivam-iyk/social-media-backend.git
    ```
 2. Install NPM packages
    ```sh
@@ -121,7 +121,7 @@
 
 You can get the API documentation [here](https://documenter.getpostman.com/view/37731620/2sAY4rGR2L).
 
-For frontend code visit https://github.com/sethshivam11/sociial
+For frontend code visit https://github.com/shivam-iyk/sociial
 
 You can test them and use it in your projects as well.
 
@@ -140,8 +140,8 @@ Don't forget to give the project a star! Thanks again!
 
 ### Top contributors:
 
-<a href="https://github.com/sethshivam11/social-media-backend/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=sethshivam11/social-media-backend" alt="contrib.rocks image" />
+<a href="https://github.com/shivam-iyk/social-media-backend/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=shivam-iyk/social-media-backend" alt="contrib.rocks image" />
 </a>
 
 <!-- ## License
@@ -150,9 +150,9 @@ Distributed under the project_license. See `LICENSE.txt` for more information. -
 
 ## Contact
 
-Shivam - [@sethshivam11](https://x.com/sethshivam11) - sociial@gmail.com
+Shivam - [@sethshivam11](https://x.com/shivam_iyk)
 
-Project Link: [https://github.com/sethshivam11/social-media-backend](https://github.com/sethshivam11/social-media-backend)
+Project Link: [https://github.com/shivam-iyk/social-media-backend](https://github.com/shivam-iyk/social-media-backend)
 
 [contributors-shield]: https://img.shields.io/github/contributors/sethshivam11/social-media-backend.svg?style=for-the-badge
 [contributors-url]: https://github.com/sethshivam11/social-media-backend/graphs/contributors
